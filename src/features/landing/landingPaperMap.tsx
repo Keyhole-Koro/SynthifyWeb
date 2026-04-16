@@ -369,7 +369,8 @@ export function buildLandingPaperMap({
   onEmailSubmit,
   onGoogleSubmit,
   onLogout,
-  onEnterWorkspace,
+  onOpenWorkspace,
+  onCreateWorkspace,
 }: {
   user: User | null;
   workspaces: Workspace[];
@@ -379,7 +380,8 @@ export function buildLandingPaperMap({
   onEmailSubmit: () => void;
   onGoogleSubmit: () => void;
   onLogout: () => void;
-  onEnterWorkspace: () => void;
+  onOpenWorkspace: (workspaceId: string) => void;
+  onCreateWorkspace: (name: string) => Promise<void>;
 }): PaperMap {
   const paperMap = buildPaperMap(LANDING_PAPERS);
   const authPaper = paperMap.get('auth');
@@ -397,7 +399,8 @@ export function buildLandingPaperMap({
           onEmailSubmit={onEmailSubmit}
           onGoogleSubmit={onGoogleSubmit}
           onLogout={onLogout}
-          onEnterWorkspace={onEnterWorkspace}
+          onOpenWorkspace={onOpenWorkspace}
+          onCreateWorkspace={onCreateWorkspace}
         />
       ),
     });

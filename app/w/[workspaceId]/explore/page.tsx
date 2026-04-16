@@ -90,7 +90,7 @@ export default function ExplorePage() {
           return;
         }
         if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
-          router.replace('/workspaces');
+          router.replace('/');
           return;
         }
         router.replace('/');
@@ -118,7 +118,7 @@ export default function ExplorePage() {
           return;
         }
         if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
-          router.replace('/workspaces');
+          router.replace('/');
         }
       })
       .finally(() => setGraphLoading(false));

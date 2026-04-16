@@ -126,7 +126,7 @@ export default function WorkspacePage() {
           return;
         }
         if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
-          router.replace('/workspaces');
+          router.replace('/');
           return;
         }
         router.replace('/');

@@ -8,7 +8,7 @@ import { type AuthMode } from '@/features/landing/AuthPaper';
 import { buildLandingPaperMap, LANDING_ROOT_ID } from '@/features/landing/landingPaperMap';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, type User, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { listWorkspaces, type Workspace } from '@/features/workspaces/api';
+import { createWorkspace, listWorkspaces, type Workspace } from '@/features/workspaces/api';
 
 type ExpansionMap = PaperViewState['expansionMap'];
 
@@ -62,8 +62,13 @@ export default function LandingPage() {
     await signOut(auth);
   }, []);
 
-  const handleEnterWorkspace = useCallback(() => {
-    router.push('/workspaces');
+  const handleOpenWorkspace = useCallback((workspaceId: string) => {
+    router.push(`/w/${workspaceId}`);
+  }, [router]);
+
+  const handleCreateWorkspace = useCallback(async (name: string) => {
+    const ws = await createWorkspace(name);
+    router.push(`/w/${ws.workspace_id}`);
   }, [router]);
 
   const paperMap = useMemo(
@@ -77,9 +82,10 @@ export default function LandingPage() {
         onEmailSubmit: handleEmailSubmit,
         onGoogleSubmit: handleGoogleSubmit,
         onLogout: handleLogout,
-        onEnterWorkspace: handleEnterWorkspace,
+        onOpenWorkspace: handleOpenWorkspace,
+        onCreateWorkspace: handleCreateWorkspace,
       }),
-    [user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleEnterWorkspace],
+    [user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleOpenWorkspace, handleCreateWorkspace],
   );
 
   const [expansionMap, setExpansionMap] = useState<ExpansionMap>(

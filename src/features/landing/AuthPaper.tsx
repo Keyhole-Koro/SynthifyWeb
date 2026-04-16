@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { type User } from 'firebase/auth';
 import { type Workspace } from '@/features/workspaces/api';
 
@@ -12,7 +13,8 @@ type AuthPaperProps = {
   onEmailSubmit: () => void;
   onGoogleSubmit: () => void;
   onLogout: () => void;
-  onEnterWorkspace: () => void;
+  onOpenWorkspace: (workspaceId: string) => void;
+  onCreateWorkspace: (name: string) => Promise<void>;
 };
 
 export function AuthPaper({
@@ -24,9 +26,34 @@ export function AuthPaper({
   onEmailSubmit,
   onGoogleSubmit,
   onLogout,
-  onEnterWorkspace,
+  onOpenWorkspace,
+  onCreateWorkspace,
 }: AuthPaperProps) {
   const isLogin = mode === 'login';
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showCreateForm) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [showCreateForm]);
+
+  async function handleCreateWorkspace(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newWorkspaceName.trim();
+    if (!name) return;
+    setCreatingWorkspace(true);
+    try {
+      await onCreateWorkspace(name);
+      setShowCreateForm(false);
+      setNewWorkspaceName('');
+    } finally {
+      setCreatingWorkspace(false);
+    }
+  }
 
   if (user) {
     return (
@@ -36,7 +63,7 @@ export function AuthPaper({
             ようこそ、{user.displayName || user.email} さん
           </h3>
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
-            ログインしました。ワークスペースに入って探索を始めましょう。
+            ログインしました。この場でワークスペースを開くか、新規作成できます。
           </p>
         </div>
 
@@ -45,18 +72,100 @@ export function AuthPaper({
             <p style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', marginBottom: 8, textTransform: 'uppercase' }}>
               あなたのワークスペース
             </p>
-            {workspaces.map(ws => (
-              <div key={ws.workspace_id} style={{ fontSize: '0.85rem', fontWeight: 500, color: '#1e293b' }}>
-                {ws.name}
-              </div>
-            ))}
+            <div style={{ display: 'grid', gap: 8 }}>
+              {workspaces.map((ws) => (
+                <button
+                  key={ws.workspace_id}
+                  type="button"
+                  onClick={() => onOpenWorkspace(ws.workspace_id)}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    border: '1px solid #e2e8f0',
+                    background: 'white',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {ws.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {showCreateForm ? (
+          <form
+            onSubmit={handleCreateWorkspace}
+            style={{
+              marginBottom: 10,
+              display: 'grid',
+              gap: 8,
+              padding: 12,
+              background: '#f8fafc',
+              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={newWorkspaceName}
+              onChange={(e) => setNewWorkspaceName(e.target.value)}
+              placeholder="ワークスペース名"
+              maxLength={64}
+              disabled={creatingWorkspace}
+              style={{ width: '100%', border: '1px solid #e2e8f0', background: 'white', borderRadius: 6, padding: '8px 12px', fontSize: '0.85rem', outline: 'none' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="submit"
+                disabled={creatingWorkspace || !newWorkspaceName.trim()}
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  background: '#4f46e5',
+                  borderRadius: 6,
+                  padding: '10px 0',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  color: 'white',
+                  cursor: creatingWorkspace ? 'wait' : 'pointer',
+                  opacity: creatingWorkspace || !newWorkspaceName.trim() ? 0.7 : 1,
+                }}
+              >
+                {creatingWorkspace ? '作成中…' : '作成'}
+              </button>
+              <button
+                type="button"
+                disabled={creatingWorkspace}
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setNewWorkspaceName('');
+                }}
+                style={{
+                  border: '1px solid #e2e8f0',
+                  background: 'white',
+                  borderRadius: 6,
+                  padding: '10px 12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  color: '#64748b',
+                  cursor: 'pointer',
+                }}
+              >
+                キャンセル
+              </button>
+            </div>
+          </form>
+        ) : (
           <button
             type="button"
-            onClick={onEnterWorkspace}
+            onClick={() => setShowCreateForm(true)}
             disabled={loading}
             style={{
               width: '100%',
@@ -69,11 +178,14 @@ export function AuthPaper({
               color: 'white',
               cursor: loading ? 'wait' : 'pointer',
               opacity: loading ? 0.7 : 1,
+              marginBottom: 10,
             }}
           >
-            {workspaces.length > 0 ? 'ワークスペースに入る' : 'ワークスペースを作成'}
+            新しいワークスペースを作る
           </button>
+        )}
 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button
             type="button"
             onClick={onLogout}
