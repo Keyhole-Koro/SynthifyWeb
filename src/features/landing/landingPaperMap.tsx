@@ -3,6 +3,7 @@ import type { Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
 import { AuthPaper, type AuthMode } from './AuthPaper';
 import { type User } from 'firebase/auth';
 import { type Workspace } from '@/features/workspaces/api';
+import type { ApiNode, ApiEdge } from '@/features/graph/api';
 
 export const LANDING_ROOT_ID = 'root';
 
@@ -365,6 +366,8 @@ export function buildLandingPaperMap({
   workspaces,
   authMode,
   loading,
+  openWorkspaceIds,
+  extraPapers,
   onAuthModeChange,
   onEmailSubmit,
   onGoogleSubmit,
@@ -376,6 +379,8 @@ export function buildLandingPaperMap({
   workspaces: Workspace[];
   authMode: AuthMode;
   loading: boolean;
+  openWorkspaceIds: string[];
+  extraPapers: Paper[];
   onAuthModeChange: (mode: AuthMode) => void;
   onEmailSubmit: () => void;
   onGoogleSubmit: () => void;
@@ -383,9 +388,18 @@ export function buildLandingPaperMap({
   onOpenWorkspace: (workspaceId: string) => void;
   onCreateWorkspace: (name: string) => Promise<void>;
 }): PaperMap {
-  const paperMap = buildPaperMap(LANDING_PAPERS);
-  const authPaper = paperMap.get('auth');
+  // Patch auth paper to include opened workspace IDs as children
+  const wsChildIds = openWorkspaceIds.map((id) => `ws_${id}`);
+  const basePapers = LANDING_PAPERS.map((p) =>
+    p.id === 'auth'
+      ? { ...p, childIds: wsChildIds }
+      : p,
+  );
 
+  const allPapers = [...basePapers, ...extraPapers];
+  const paperMap = buildPaperMap(allPapers);
+
+  const authPaper = paperMap.get('auth');
   if (authPaper) {
     paperMap.set('auth', {
       ...authPaper,
@@ -408,3 +422,5 @@ export function buildLandingPaperMap({
 
   return paperMap;
 }
+
+export type { ApiNode, ApiEdge };
