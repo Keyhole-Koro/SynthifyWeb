@@ -1,23 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import type { PaperViewState } from '@keyhole-koro/paper-in-paper';
+import { createInitialState, reduce } from '@keyhole-koro/paper-in-paper';
 import { type AuthMode } from '@/features/landing/AuthPaper';
 import { buildLandingPaperMap, LANDING_ROOT_ID } from '@/features/landing/landingPaperMap';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, type User, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { createWorkspace, listWorkspaces, type Workspace } from '@/features/workspaces/api';
 
-type ExpansionMap = PaperViewState['expansionMap'];
-
 const PaperCanvas = dynamic(
   () => import('@keyhole-koro/paper-in-paper').then((mod) => mod.PaperCanvas),
   { ssr: false },
 );
-
-const NOOP_PAPER_MAP_CHANGE = () => {};
 
 export default function LandingPage() {
   const router = useRouter();
@@ -88,10 +84,21 @@ export default function LandingPage() {
     [user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleOpenWorkspace, handleCreateWorkspace],
   );
 
-  const [expansionMap, setExpansionMap] = useState<ExpansionMap>(
-    new Map([[LANDING_ROOT_ID, { openChildIds: ['auth'] }]]),
+  const [viewState, dispatch] = useReducer(
+    reduce,
+    null,
+    () => {
+      const initial = createInitialState(new Map());
+      return reduce(initial, { type: 'OPEN_NODE', parentId: LANDING_ROOT_ID, childId: 'auth' });
+    },
   );
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+
+  // paperMap が変わるたびに reducer に同期（auth 状態変化・ワークスペース追加など）
+  useEffect(() => {
+    dispatch({ type: '__SYNC_PAPER_MAP', paperMap });
+  }, [paperMap]);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>
@@ -103,38 +110,64 @@ export default function LandingPage() {
       </div>
 
       {/* logo */}
-      <div className="absolute left-6 top-6 z-20 flex select-none items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 shadow-md shadow-indigo-200">
-          <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-          </svg>
+      {!isFullscreen && (
+        <div className="absolute left-6 top-6 z-20 flex select-none items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 shadow-md shadow-indigo-200">
+            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            </svg>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold tracking-tight text-stone-800">Synthify</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-stone-400">Knowledge Graph Platform</span>
+          </div>
         </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold tracking-tight text-stone-800">Synthify</span>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-stone-400">Knowledge Graph Platform</span>
-        </div>
-      </div>
+      )}
 
       {/* headline */}
-      <div className="absolute left-1/2 top-[11%] z-10 -translate-x-1/2 text-center select-none whitespace-nowrap">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-500/70 mb-2">Document Intelligence</p>
-        <h1 className="text-3xl font-bold tracking-tight text-stone-800 sm:text-4xl">
-          ドキュメントから、<span className="text-indigo-500">知識グラフ</span>へ
-        </h1>
-      </div>
+      {!isFullscreen && (
+        <div className="absolute left-1/2 top-[11%] z-10 -translate-x-1/2 text-center select-none whitespace-nowrap">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-500/70 mb-2">Document Intelligence</p>
+          <h1 className="text-3xl font-bold tracking-tight text-stone-800 sm:text-4xl">
+            ドキュメントから、<span className="text-indigo-500">知識グラフ</span>へ
+          </h1>
+        </div>
+      )}
 
       {/* canvas */}
-      <div className="absolute left-1/2 top-1/2 aspect-[2.05/1] w-[min(95vw,128vh)] max-h-[62vh] -translate-x-1/2 -translate-y-[44%] overflow-hidden rounded-2xl shadow-xl shadow-stone-400/30 ring-1 ring-stone-300/60 [contain:layout_paint] isolate">
+      <div
+        className={
+          isFullscreen
+            ? 'absolute inset-0 z-30 overflow-hidden rounded-none [contain:layout_paint] isolate'
+            : 'absolute left-1/2 top-1/2 aspect-[2.05/1] w-[min(95vw,128vh)] max-h-[62vh] -translate-x-1/2 -translate-y-[44%] overflow-hidden rounded-2xl shadow-xl shadow-stone-400/30 ring-1 ring-stone-300/60 [contain:layout_paint] isolate'
+        }
+      >
         <PaperCanvas
-          paperMap={paperMap}
+          paperMap={viewState.paperMap}
           rootId={LANDING_ROOT_ID}
-          expansionMap={expansionMap}
-          focusedNodeId={focusedNodeId}
+          expansionMap={viewState.expansionMap}
+          focusedNodeId={viewState.focusedNodeId}
           debug={false}
-          onPaperMapChange={NOOP_PAPER_MAP_CHANGE}
-          onExpansionMapChange={setExpansionMap}
-          onFocusedNodeIdChange={setFocusedNodeId}
+          onPaperMapChange={(pm) => dispatch({ type: '__SYNC_PAPER_MAP', paperMap: pm })}
+          onExpansionMapChange={(em) => dispatch({ type: '__SYNC_EXPANSION', expansionMap: em })}
+          onFocusedNodeIdChange={(id) => dispatch({ type: '__SYNC_FOCUSED', focusedNodeId: id })}
         />
+        {/* fullscreen toggle */}
+        <button
+          onClick={() => setIsFullscreen((v) => !v)}
+          className="absolute right-3 top-3 z-40 flex h-7 w-7 items-center justify-center rounded-md bg-white/70 text-stone-600 shadow-sm backdrop-blur-sm hover:bg-white hover:text-stone-900 transition-colors"
+          title={isFullscreen ? '縮小' : '全画面'}
+        >
+          {isFullscreen ? (
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25M9 15H4.5M9 15v4.5M9 15l-5.25 5.25" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+            </svg>
+          )}
+        </button>
       </div>
 
       {loading && (

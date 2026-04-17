@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { onAuthStateChanged } from 'firebase/auth';
-import type { PaperMap, PaperViewState } from '@keyhole-koro/paper-in-paper';
+import { createInitialState, reduce } from '@keyhole-koro/paper-in-paper';
 import { buildPaperMapFromGraph, findRootNodeId } from '@/features/graph/buildPaperMap';
 import {
   getGraph, getGraphEntityDetail,
@@ -13,8 +13,6 @@ import {
 import { listDocuments, type Document } from '@/features/documents/api';
 import { ApiError } from '@/lib/rpc';
 import { auth } from '@/lib/firebase';
-
-type ExpansionMap = PaperViewState['expansionMap'];
 
 // PaperCanvas must be rendered client-side only (it uses browser APIs)
 const PaperCanvas = dynamic(
@@ -37,10 +35,8 @@ export default function ExplorePage() {
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string>('');
-  const [paperMap, setPaperMap] = useState<PaperMap>(new Map());
-  const [expansionMap, setExpansionMap] = useState<ExpansionMap>(new Map());
+  const [viewState, dispatch] = useReducer(reduce, null, () => createInitialState(new Map()));
   const [rootId, setRootId] = useState<string | undefined>();
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [detail, setDetail] = useState<GraphEntityDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [graphLoading, setGraphLoading] = useState(false);
@@ -73,12 +69,12 @@ export default function ExplorePage() {
         const paramDoc = searchParams.get('doc');
         if (paramDoc && completed.find((d) => d.document_id === paramDoc)) {
           setGraphLoading(true);
-          setFocusedNodeId(null);
+          dispatch({ type: '__SYNC_FOCUSED', focusedNodeId: null });
           setDetail(null);
           setSelectedDocId(paramDoc);
         } else if (completed.length > 0) {
           setGraphLoading(true);
-          setFocusedNodeId(null);
+          dispatch({ type: '__SYNC_FOCUSED', focusedNodeId: null });
           setDetail(null);
           setSelectedDocId(completed[0].document_id);
         }
@@ -107,9 +103,9 @@ export default function ExplorePage() {
         setEdges(graph.edges);
         const pm = buildPaperMapFromGraph(graph.nodes, graph.edges);
         const rid = findRootNodeId(graph.nodes, graph.edges);
-        setPaperMap(pm);
+        dispatch({ type: '__SYNC_PAPER_MAP', paperMap: pm });
+        dispatch({ type: '__SYNC_EXPANSION', expansionMap: new Map() });
         setRootId(rid);
-        setExpansionMap(new Map());
       })
       .catch((err) => {
         console.error(err);
@@ -126,6 +122,7 @@ export default function ExplorePage() {
 
   // Load detail when node focused
   useEffect(() => {
+    const focusedNodeId = viewState.focusedNodeId;
     if (!authReady || !focusedNodeId || !selectedDocId) return;
     getGraphEntityDetail({
       workspace_id: workspaceId,
@@ -136,11 +133,11 @@ export default function ExplorePage() {
       .then(setDetail)
       .catch(console.error)
       .finally(() => setDetailLoading(false));
-  }, [authReady, focusedNodeId, workspaceId, selectedDocId]);
+  }, [authReady, viewState.focusedNodeId, workspaceId, selectedDocId]);
 
   const handleDocChange = useCallback((docId: string) => {
     setGraphLoading(true);
-    setFocusedNodeId(null);
+    dispatch({ type: '__SYNC_FOCUSED', focusedNodeId: null });
     setDetail(null);
     setDetailLoading(false);
     setSelectedDocId(docId);
@@ -148,7 +145,7 @@ export default function ExplorePage() {
   }, [workspaceId, router]);
 
   const handleFocusedNodeIdChange = useCallback((nodeId: string | null) => {
-    setFocusedNodeId(nodeId);
+    dispatch({ type: '__SYNC_FOCUSED', focusedNodeId: nodeId });
     if (!nodeId) {
       setDetail(null);
       setDetailLoading(false);
@@ -157,7 +154,7 @@ export default function ExplorePage() {
     setDetailLoading(true);
   }, []);
 
-  const focusedNode = nodes.find((n) => n.id === focusedNodeId);
+  const focusedNode = nodes.find((n) => n.id === viewState.focusedNodeId);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-900">
@@ -204,31 +201,31 @@ export default function ExplorePage() {
             <div className="flex h-full items-center justify-center text-slate-500">
               完了済みのドキュメントがありません
             </div>
-          ) : paperMap.size === 0 && !graphLoading ? (
+          ) : viewState.paperMap.size === 0 && !graphLoading ? (
             <div className="flex h-full items-center justify-center text-slate-500">
               グラフデータがありません
             </div>
           ) : (
             <PaperCanvas
-              paperMap={paperMap}
+              paperMap={viewState.paperMap}
               rootId={rootId}
-              expansionMap={expansionMap}
-              focusedNodeId={focusedNodeId}
-              onPaperMapChange={setPaperMap}
-              onExpansionMapChange={setExpansionMap}
+              expansionMap={viewState.expansionMap}
+              focusedNodeId={viewState.focusedNodeId}
+              onPaperMapChange={(pm) => dispatch({ type: '__SYNC_PAPER_MAP', paperMap: pm })}
+              onExpansionMapChange={(em) => dispatch({ type: '__SYNC_EXPANSION', expansionMap: em })}
               onFocusedNodeIdChange={handleFocusedNodeIdChange}
             />
           )}
         </div>
 
         {/* Detail panel */}
-        {focusedNodeId && (
+        {viewState.focusedNodeId && (
           <DetailPanel
             node={focusedNode ?? null}
             detail={detail}
             loading={detailLoading}
             onClose={() => {
-              setFocusedNodeId(null);
+              dispatch({ type: '__SYNC_FOCUSED', focusedNodeId: null });
               setDetail(null);
               setDetailLoading(false);
             }}
