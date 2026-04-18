@@ -104,7 +104,7 @@ const LANDING_PAPERS: Paper[] = [
   },
   {
     id: 'auth',
-    title: 'ログイン / 新規登録',
+    title: 'アカウント',
     description: 'Synthify をはじめる',
     hue: 250,
     content: null,

@@ -56,7 +56,6 @@ export default function LandingPage() {
     expansionOpen(new Map(), LANDING_ROOT_ID, 'auth'),
   );
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>('auth');
-  const [spotlightNodeId, setSpotlightNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -83,7 +82,7 @@ export default function LandingPage() {
     if (openWorkspaceIdsRef.current.includes(workspaceId)) {
       setExpansionMap((prev) => expansionOpen(prev, 'auth', wsNodeId));
       setFocusedNodeId(wsNodeId);
-      setSpotlightNodeId(wsNodeId);
+      setIsFullscreen(true);
       return;
     }
     pendingOpenRef.current = { parentId: 'auth', childId: wsNodeId, spotlight: true };
@@ -152,16 +151,8 @@ export default function LandingPage() {
     pendingOpenRef.current = null;
     setExpansionMap((prev) => expansionOpen(prev, parentId, childId));
     setFocusedNodeId(childId);
-    if (spotlight) setSpotlightNodeId(childId);
+    if (spotlight) setIsFullscreen(true);
   }, [paperMap]);
-
-  useEffect(() => {
-    if (spotlightNodeId !== null) {
-      setIsFullscreen(true);
-    } else {
-      setIsFullscreen(false);
-    }
-  }, [spotlightNodeId]);
 
   // ── Auth handlers ─────────────────────────────────────────────────────────
 
@@ -187,7 +178,7 @@ export default function LandingPage() {
     setExtraPapers([]);
     setExpansionMap(expansionOpen(new Map(), LANDING_ROOT_ID, 'auth'));
     setFocusedNodeId('auth');
-    setSpotlightNodeId(null);
+    setIsFullscreen(false);
     nodeWorkspaceRef.current.clear();
     nodeHasChildrenRef.current.clear();
     loadedSubtreeNodesRef.current.clear();
@@ -357,27 +348,12 @@ export default function LandingPage() {
           rootId={LANDING_ROOT_ID}
           expansionMap={expansionMap}
           focusedNodeId={focusedNodeId}
-          spotlightNodeId={spotlightNodeId}
+          isFullscreen={isFullscreen}
           debug={false}
           onExpansionMapChange={handleExpansionMapChange}
           onFocusedNodeIdChange={setFocusedNodeId}
-          onSpotlightNodeIdChange={setSpotlightNodeId}
+          onFullscreenChange={setIsFullscreen}
         />
-        <button
-          onClick={() => setIsFullscreen((v) => !v)}
-          className="absolute right-3 top-3 z-40 flex h-7 w-7 items-center justify-center rounded-md bg-white/70 text-stone-600 shadow-sm backdrop-blur-sm hover:bg-white hover:text-stone-900 transition-colors"
-          title={isFullscreen ? '縮小' : '全画面'}
-        >
-          {isFullscreen ? (
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25M9 15H4.5M9 15v4.5M9 15l-5.25 5.25" />
-            </svg>
-          ) : (
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-            </svg>
-          )}
-        </button>
       </div>
 
       {loading && (
