@@ -82,10 +82,9 @@ export default function LandingPage() {
     if (openWorkspaceIdsRef.current.includes(workspaceId)) {
       setExpansionMap((prev) => expansionOpen(prev, 'auth', wsNodeId));
       setFocusedNodeId(wsNodeId);
-      setIsFullscreen(true);
       return;
     }
-    pendingOpenRef.current = { parentId: 'auth', childId: wsNodeId, spotlight: true };
+    pendingOpenRef.current = { parentId: 'auth', childId: wsNodeId, spotlight: false };
     setOpenWorkspaceIds((prev) => [...prev, workspaceId]);
   }, []);
 
@@ -143,16 +142,21 @@ export default function LandingPage() {
     [user, workspaces, authMode, loading, openWorkspaceIds, workspacePaperNodes, extraPapers],
   );
 
-  // Fire pending open/spotlight once the target node appears in paperMap
+  // Fire pending open once the target node appears in paperMap
   useEffect(() => {
     if (!pendingOpenRef.current) return;
-    const { parentId, childId, spotlight } = pendingOpenRef.current;
+    const { parentId, childId } = pendingOpenRef.current;
     if (!paperMap.has(childId)) return;
     pendingOpenRef.current = null;
     setExpansionMap((prev) => expansionOpen(prev, parentId, childId));
     setFocusedNodeId(childId);
-    if (spotlight) setIsFullscreen(true);
   }, [paperMap]);
+
+  // auth 以降（ワークスペース等）が展開されているとき全画面にする
+  useEffect(() => {
+    const hasWorkspaceOpen = (expansionMap.get('auth')?.openChildIds.length ?? 0) > 0;
+    setIsFullscreen(hasWorkspaceOpen);
+  }, [expansionMap]);
 
   // ── Auth handlers ─────────────────────────────────────────────────────────
 
@@ -349,7 +353,7 @@ export default function LandingPage() {
           expansionMap={expansionMap}
           focusedNodeId={focusedNodeId}
           isFullscreen={isFullscreen}
-          debug={false}
+          debug={true}
           onExpansionMapChange={handleExpansionMapChange}
           onFocusedNodeIdChange={setFocusedNodeId}
           onFullscreenChange={setIsFullscreen}
