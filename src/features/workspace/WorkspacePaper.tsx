@@ -12,7 +12,8 @@ import {
 interface Props {
   workspaceId: string;
   workspaceName: string;
-  onExploreGraph: () => Promise<void>;
+  childPapers: Array<{ id: string; title: string }>;
+  onSelectPaper: (paperId: string) => void;
 }
 
 const s = {
@@ -33,10 +34,9 @@ const s = {
   }),
 };
 
-export function WorkspacePaper({ workspaceId, workspaceName, onExploreGraph }: Props) {
+export function WorkspacePaper({ workspaceId, workspaceName, childPapers, onSelectPaper }: Props) {
   const [docs, setDocs] = useState<Document[]>([]);
   const [docsLoading, setDocsLoading] = useState(true);
-  const [graphLoading, setGraphLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -70,21 +70,37 @@ export function WorkspacePaper({ workspaceId, workspaceName, onExploreGraph }: P
     }
   }
 
-  async function handleExplore() {
-    setGraphLoading(true);
-    try {
-      await onExploreGraph();
-    } catch (err) {
-      console.error('graph load failed:', err);
-    } finally {
-      setGraphLoading(false);
-    }
+  function stopPointerPropagation(e: React.PointerEvent) {
+    e.stopPropagation();
   }
 
   return (
     <div style={{ paddingTop: 2 }}>
       <div style={s.section}>
         <p style={s.label}>{workspaceName}</p>
+
+        <div style={{ marginBottom: 10 }}>
+          <p style={s.label}>Paper Nodes</p>
+          {childPapers.length === 0 ? (
+            <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 8 }}>
+              まだ paper node がありません
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
+              {childPapers.map((paper) => (
+                <button
+                  key={paper.id}
+                  style={{ ...s.btn('ghost'), textAlign: 'left', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 8 }}
+                  onPointerDown={stopPointerPropagation}
+                  onPointerUp={stopPointerPropagation}
+                  onClick={() => onSelectPaper(paper.id)}
+                >
+                  {paper.title}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {docsLoading ? (
           <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>読み込み中…</p>
@@ -122,6 +138,8 @@ export function WorkspacePaper({ workspaceId, workspaceName, onExploreGraph }: P
         />
         <button
           style={s.btn('secondary')}
+          onPointerDown={stopPointerPropagation}
+          onPointerUp={stopPointerPropagation}
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
         >
@@ -131,16 +149,6 @@ export function WorkspacePaper({ workspaceId, workspaceName, onExploreGraph }: P
           <p style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: 4 }}>{uploadError}</p>
         )}
       </div>
-
-      {docs.length > 0 && (
-        <button
-          style={s.btn('primary')}
-          onClick={handleExplore}
-          disabled={graphLoading}
-        >
-          {graphLoading ? '読み込み中…' : 'グラフを探索 →'}
-        </button>
-      )}
     </div>
   );
 }

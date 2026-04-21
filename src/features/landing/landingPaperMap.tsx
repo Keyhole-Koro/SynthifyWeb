@@ -3,6 +3,7 @@ import type { Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
 import { AuthPaper, type AuthMode } from './AuthPaper';
 import { type User } from 'firebase/auth';
 import { type Workspace } from '@/features/workspaces/api';
+import { useEffect, useRef, useState } from 'react';
 import type { ApiNode, ApiEdge } from '@/features/graph/api';
 
 export const LANDING_ROOT_ID = 'root';
@@ -62,10 +63,132 @@ function PL({ id, children, variant }: { id: string; children?: React.ReactNode;
   );
 }
 
+function RootWorkspaceContent({
+  workspaces,
+  loading,
+  onOpenWorkspace,
+  onCreateWorkspace,
+  onLogout,
+}: {
+  workspaces: Workspace[];
+  loading: boolean;
+  onOpenWorkspace: (workspaceId: string) => void;
+  onCreateWorkspace: (name: string) => Promise<void>;
+  onLogout: () => void;
+}) {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showCreateForm) setTimeout(() => inputRef.current?.focus(), 0);
+  }, [showCreateForm]);
+
+  function stop(e: React.PointerEvent) { e.stopPropagation(); }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newName.trim();
+    if (!name) return;
+    setCreating(true);
+    try {
+      await onCreateWorkspace(name);
+      setShowCreateForm(false);
+      setNewName('');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <div style={{ paddingTop: 4 }}>
+      {workspaces.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)', marginBottom: 6 }}>
+            ワークスペース
+          </p>
+          <div style={{ display: 'grid', gap: 6 }}>
+            {workspaces.map((ws) => (
+              <a
+                key={ws.workspace_id}
+                data-paper-id={`ws_${ws.workspace_id}`}
+                onPointerDown={(e) => { e.stopPropagation(); onOpenWorkspace(ws.workspace_id); }}
+                onPointerUp={(e) => e.stopPropagation()}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left', border: '1px solid var(--link-border)',
+                  background: 'var(--link-bg)', borderRadius: 8, padding: '10px 12px',
+                  fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer',
+                  textDecoration: 'none',
+                }}
+              >
+                {ws.name}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showCreateForm ? (
+        <form onSubmit={handleSubmit} style={{ marginBottom: 10, display: 'grid', gap: 8, padding: 12, background: 'var(--surface-alt)', borderRadius: 8, border: '1px solid var(--link-border)' }}>
+          <input
+            ref={inputRef}
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="ワークスペース名"
+            maxLength={64}
+            disabled={creating}
+            style={{ width: '100%', border: '1px solid var(--link-border)', background: 'var(--surface)', borderRadius: 6, padding: '8px 12px', fontSize: '0.85rem', outline: 'none' }}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="submit"
+              disabled={creating || !newName.trim()}
+              onPointerDown={stop} onPointerUp={stop}
+              style={{ flex: 1, border: 'none', background: 'var(--accent)', borderRadius: 6, padding: '10px 0', fontSize: '0.85rem', fontWeight: 600, color: '#fff', cursor: creating ? 'wait' : 'pointer', opacity: creating || !newName.trim() ? 0.7 : 1 }}
+            >
+              {creating ? '作成中…' : '作成'}
+            </button>
+            <button
+              type="button"
+              disabled={creating}
+              onPointerDown={stop} onPointerUp={stop}
+              onClick={() => { setShowCreateForm(false); setNewName(''); }}
+              style={{ border: '1px solid var(--link-border)', background: 'var(--surface)', borderRadius: 6, padding: '10px 12px', fontSize: '0.8rem', fontWeight: 500, color: 'var(--muted)', cursor: 'pointer' }}
+            >
+              キャンセル
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button
+          type="button"
+          onPointerDown={stop} onPointerUp={stop}
+          onClick={() => setShowCreateForm(true)}
+          disabled={loading}
+          style={{ width: '100%', border: 'none', background: 'var(--accent)', borderRadius: 6, padding: '10px 0', fontSize: '0.85rem', fontWeight: 600, color: '#fff', cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1, marginBottom: 10 }}
+        >
+          新しいワークスペースを作る
+        </button>
+      )}
+
+      <button
+        type="button"
+        onPointerDown={stop} onPointerUp={stop}
+        onClick={onLogout}
+        style={{ width: '100%', border: '1px solid var(--link-border)', background: 'var(--surface)', borderRadius: 6, padding: '8px 0', fontSize: '0.8rem', fontWeight: 500, color: 'var(--muted)', cursor: 'pointer' }}
+      >
+        ログアウト
+      </button>
+    </div>
+  );
+}
+
 const LANDING_PAPERS: Paper[] = [
   {
     id: 'root',
-    title: 'Synthifyとは',
+    title: 'トップ',
     description: 'ドキュメントを知識グラフに変換・探索するシステム',
     hue: 230,
     content: (
@@ -100,7 +223,16 @@ const LANDING_PAPERS: Paper[] = [
       </section>
     ),
     parentId: null,
-    childIds: ['auth', 'extraction', 'graph', 'explore', 'team'],
+    childIds: ['auth', 'workspaces', 'extraction', 'graph', 'explore', 'team'],
+  },
+  {
+    id: 'workspaces',
+    title: 'ワークスペース',
+    description: 'あなたのワークスペース一覧',
+    hue: 200,
+    content: null,
+    parentId: 'root',
+    childIds: [],
   },
   {
     id: 'auth',
@@ -366,7 +498,6 @@ export function buildLandingPaperMap({
   workspaces,
   authMode,
   loading,
-  openWorkspaceIds,
   extraPapers,
   onAuthModeChange,
   onEmailSubmit,
@@ -379,7 +510,6 @@ export function buildLandingPaperMap({
   workspaces: Workspace[];
   authMode: AuthMode;
   loading: boolean;
-  openWorkspaceIds: string[];
   extraPapers: Paper[];
   onAuthModeChange: (mode: AuthMode) => void;
   onEmailSubmit: () => void;
@@ -388,17 +518,53 @@ export function buildLandingPaperMap({
   onOpenWorkspace: (workspaceId: string) => void;
   onCreateWorkspace: (name: string) => Promise<void>;
 }): PaperMap {
-  // Patch auth paper to include opened workspace IDs as children
-  const wsChildIds = openWorkspaceIds.map((id) => `ws_${id}`);
-  const basePapers = LANDING_PAPERS.map((p) =>
-    p.id === 'auth'
-      ? { ...p, childIds: wsChildIds }
-      : p,
-  );
+  const wsNodeIds = extraPapers
+    .filter((p) => p.parentId === 'workspaces')
+    .map((p) => p.id);
 
-  const allPapers = [...basePapers, ...extraPapers];
+  const allPapers = [...LANDING_PAPERS, ...extraPapers];
   const paperMap = buildPaperMap(allPapers);
 
+  // Override root content when logged in (replace auth link with workspaces link)
+  const rootPaper = paperMap.get(LANDING_ROOT_ID);
+  if (rootPaper && user) {
+    paperMap.set(LANDING_ROOT_ID, {
+      ...rootPaper,
+      content: (
+        <section>
+          <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>Synthify</h2>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
+              複数のドキュメントを読み込み、<PL id="extraction">AIが概念・主張・根拠を抽出</PL>して
+              <PL id="graph" />を自動生成。そのまま<PL id="workspaces">ワークスペースに入って</PL>
+              <PL id="explore">paper-in-paper形式で探索</PL>できます。
+            </p>
+            <PL id="workspaces" variant="card" />
+          </div>
+        </section>
+      ),
+    });
+  }
+
+  // Inject ws_xxx into the workspaces node's childIds
+  const workspaceNode = paperMap.get('workspaces');
+  if (workspaceNode) {
+    paperMap.set('workspaces', {
+      ...workspaceNode,
+      childIds: wsNodeIds,
+      content: (
+        <RootWorkspaceContent
+          workspaces={workspaces}
+          loading={loading}
+          onOpenWorkspace={onOpenWorkspace}
+          onCreateWorkspace={onCreateWorkspace}
+          onLogout={onLogout}
+        />
+      ),
+    });
+  }
+
+  // auth paper always gets the login/logout form
   const authPaper = paperMap.get('auth');
   if (authPaper) {
     paperMap.set('auth', {
@@ -406,14 +572,12 @@ export function buildLandingPaperMap({
       content: (
         <AuthPaper
           user={user}
-          workspaces={workspaces}
           mode={authMode}
           loading={loading}
           onModeChange={onAuthModeChange}
           onEmailSubmit={onEmailSubmit}
           onGoogleSubmit={onGoogleSubmit}
           onLogout={onLogout}
-          onOpenWorkspace={onOpenWorkspace}
           onCreateWorkspace={onCreateWorkspace}
         />
       ),

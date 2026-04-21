@@ -12,14 +12,6 @@ import { WorkspacePaper } from '@/features/workspace/WorkspacePaper';
 import { buildPaperMapFromGraph, findRootNodeId } from '@/features/graph/buildPaperMap';
 import { getGraph, getSubtree, type ApiNode, type ApiEdge, type Subtree } from '@/features/graph/api';
 
-function expansionOpen(map: ExpansionMap, parentId: string, childId: string): ExpansionMap {
-  const current = map.get(parentId)?.openChildIds ?? [];
-  if (current.includes(childId)) return map;
-  const next = new Map(map);
-  next.set(parentId, { openChildIds: [...current, childId] });
-  return next;
-}
-
 const PaperCanvas = dynamic(
   () => import('@keyhole-koro/paper-in-paper').then((mod) => mod.PaperCanvas),
   { ssr: false },
@@ -31,17 +23,14 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 
-  // Workspace papers opened inline
-  const [openWorkspaceIds, setOpenWorkspaceIds] = useState<string[]>([]);
-  // Extra papers: workspace node papers + graph papers
   const [extraPapers, setExtraPapers] = useState<Paper[]>([]);
-  // After extraPapers are synced to reducer, fire these open/spotlight actions
-  const pendingOpenRef = useRef<{ parentId: string; childId: string; spotlight: boolean } | null>(null);
+  const pendingOpenRef = useRef<{ childId: string } | null>(null);
   const nodeWorkspaceRef = useRef<Map<string, string>>(new Map());
   const nodeHasChildrenRef = useRef<Map<string, boolean>>(new Map());
+  const workspaceRootNodeRef = useRef<Map<string, string>>(new Map());
   const loadedSubtreeNodesRef = useRef<Set<string>>(new Set());
   const loadingSubtreeNodesRef = useRef<Set<string>>(new Set());
-  const prevExpansionRef = useRef<Map<string, { openChildIds: string[] }>>(new Map());
+  const prevExpansionRef = useRef<ExpansionMap>(new Map());
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [winSize, setWinSize] = useState({ w: 0, h: 0 });
@@ -52,9 +41,11 @@ export default function LandingPage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const [expansionMap, setExpansionMap] = useState<ExpansionMap>(() =>
-    expansionOpen(new Map(), LANDING_ROOT_ID, 'auth'),
-  );
+  const [expansionMap, setExpansionMap] = useState<ExpansionMap>(() => {
+    const m = new Map();
+    m.set(LANDING_ROOT_ID, { openChildIds: ['auth'] });
+    return m;
+  });
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>('auth');
 
   useEffect(() => {
@@ -74,53 +65,55 @@ export default function LandingPage() {
 
   // ── Workspace handlers ────────────────────────────────────────────────────
 
-  const openWorkspaceIdsRef = useRef<string[]>([]);
-  useEffect(() => { openWorkspaceIdsRef.current = openWorkspaceIds; }, [openWorkspaceIds]);
-
-  const handleOpenWorkspace = useCallback((workspaceId: string) => {
+  const handleOpenWorkspace = useCallback(async (workspaceId: string) => {
     const wsNodeId = `ws_${workspaceId}`;
-    if (openWorkspaceIdsRef.current.includes(workspaceId)) {
-      setExpansionMap((prev) => expansionOpen(prev, 'auth', wsNodeId));
-      setFocusedNodeId(wsNodeId);
+    const knownRootId = workspaceRootNodeRef.current.get(workspaceId);
+    if (knownRootId) {
+      setExpansionMap((prev) => {
+        const next = new Map(prev);
+        next.set(LANDING_ROOT_ID, { openChildIds: ['workspaces'] });
+        next.set('workspaces', { openChildIds: [wsNodeId] });
+        next.set(wsNodeId, { openChildIds: [knownRootId] });
+        return next;
+      });
+      setFocusedNodeId(knownRootId);
       return;
     }
-    pendingOpenRef.current = { parentId: 'auth', childId: wsNodeId, spotlight: false };
-    setOpenWorkspaceIds((prev) => [...prev, workspaceId]);
+    const ws = workspaces.find((w) => w.workspace_id === workspaceId);
+    setExtraPapers((prev) => {
+      if (prev.some((p) => p.id === wsNodeId)) return prev;
+      return [...prev, {
+        id: wsNodeId,
+        title: ws?.name ?? workspaceId,
+        description: 'ドキュメントと知識グラフ',
+        hue: 200,
+        parentId: 'workspaces',
+        childIds: [],
+        content: (
+          <WorkspacePaper
+            workspaceId={workspaceId}
+            workspaceName={ws?.name ?? workspaceId}
+            childPapers={[]}
+            onSelectPaper={() => {}}
+          />
+        ),
+      }];
+    });
+    const graph = await getGraph(workspaceId);
+    if (graph.nodes.length > 0) {
+      const rootNodeId = findRootNodeId(graph.nodes, graph.edges) ?? graph.nodes[0]?.id;
+      if (rootNodeId) {
+        workspaceRootNodeRef.current.set(workspaceId, rootNodeId);
+        await loadSubtreeForNode(workspaceId, rootNodeId, rootNodeId, 1);
+      }
+    }
   }, []);
 
   const handleCreateWorkspace = useCallback(async (name: string) => {
     const ws = await createWorkspace(name);
     setWorkspaces((prev) => [...prev, ws]);
-    handleOpenWorkspace(ws.workspace_id);
+    void handleOpenWorkspace(ws.workspace_id);
   }, [handleOpenWorkspace]);
-
-  // Build workspace paper nodes from openWorkspaceIds
-  const workspacePaperNodes = useMemo<Paper[]>(() => {
-    return openWorkspaceIds.map((wsId) => {
-      const ws = workspaces.find((w) => w.workspace_id === wsId);
-      const wsNodeId = `ws_${wsId}`;
-      // Find any graph root that is a child of this workspace node
-      const graphChildIds = extraPapers
-        .filter((p) => p.parentId === wsNodeId)
-        .map((p) => p.id);
-      return {
-        id: wsNodeId,
-        title: ws?.name ?? wsId,
-        description: 'ドキュメントと知識グラフ',
-        hue: 200,
-        parentId: 'auth',
-        childIds: graphChildIds,
-        content: (
-          <WorkspacePaper
-            workspaceId={wsId}
-            workspaceName={ws?.name ?? wsId}
-            onExploreGraph={() => handleExploreGraph(wsId)}
-          />
-        ),
-      };
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openWorkspaceIds, workspaces, extraPapers]);
 
   const paperMap = useMemo(
     () =>
@@ -129,33 +122,44 @@ export default function LandingPage() {
         workspaces,
         authMode,
         loading,
-        openWorkspaceIds,
-        extraPapers: [...workspacePaperNodes, ...extraPapers],
+        extraPapers,
         onAuthModeChange: setAuthMode,
         onEmailSubmit: handleEmailSubmit,
         onGoogleSubmit: handleGoogleSubmit,
         onLogout: handleLogout,
-        onOpenWorkspace: handleOpenWorkspace,
+        onOpenWorkspace: (workspaceId) => { void handleOpenWorkspace(workspaceId); },
         onCreateWorkspace: handleCreateWorkspace,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, workspaces, authMode, loading, openWorkspaceIds, workspacePaperNodes, extraPapers],
+    [user, workspaces, authMode, loading, extraPapers],
   );
 
   // Fire pending open once the target node appears in paperMap
   useEffect(() => {
     if (!pendingOpenRef.current) return;
-    const { parentId, childId } = pendingOpenRef.current;
+    const { childId } = pendingOpenRef.current;
     if (!paperMap.has(childId)) return;
     pendingOpenRef.current = null;
-    setExpansionMap((prev) => expansionOpen(prev, parentId, childId));
-    setFocusedNodeId(childId);
+    setExpansionMap((prev) => {
+      const next = new Map(prev);
+      next.set(LANDING_ROOT_ID, { openChildIds: ['workspaces'] });
+      next.set('workspaces', { openChildIds: [childId] });
+      const workspaceId = childId.startsWith('ws_') ? childId.slice(3) : null;
+      const graphRootId = workspaceId ? workspaceRootNodeRef.current.get(workspaceId) : null;
+      if (graphRootId) {
+        next.set(childId, { openChildIds: [graphRootId] });
+      }
+      return next;
+    });
+    const workspaceId = childId.startsWith('ws_') ? childId.slice(3) : null;
+    const graphRootId = workspaceId ? workspaceRootNodeRef.current.get(workspaceId) : null;
+    setFocusedNodeId(graphRootId ?? childId);
   }, [paperMap]);
 
-  // auth 以降（ワークスペース等）が展開されているとき全画面にする
+  // workspacesノードが開いているとき全画面にする
   useEffect(() => {
-    const hasWorkspaceOpen = (expansionMap.get('auth')?.openChildIds.length ?? 0) > 0;
-    setIsFullscreen(hasWorkspaceOpen);
+    const rootOpenIds = expansionMap.get(LANDING_ROOT_ID)?.openChildIds ?? [];
+    setIsFullscreen(rootOpenIds.includes('workspaces'));
   }, [expansionMap]);
 
   // ── Auth handlers ─────────────────────────────────────────────────────────
@@ -178,13 +182,14 @@ export default function LandingPage() {
 
   async function handleLogout() {
     await signOut(auth);
-    setOpenWorkspaceIds([]);
     setExtraPapers([]);
-    setExpansionMap(expansionOpen(new Map(), LANDING_ROOT_ID, 'auth'));
+    const m = new Map();
+    m.set(LANDING_ROOT_ID, { openChildIds: ['auth'] });
+    setExpansionMap(m);
     setFocusedNodeId('auth');
-    setIsFullscreen(false);
     nodeWorkspaceRef.current.clear();
     nodeHasChildrenRef.current.clear();
+    workspaceRootNodeRef.current.clear();
     loadedSubtreeNodesRef.current.clear();
     loadingSubtreeNodesRef.current.clear();
     prevExpansionRef.current = new Map();
@@ -192,56 +197,101 @@ export default function LandingPage() {
 
   // ── Graph explore handler ─────────────────────────────────────────────────
 
-  function mergeGraphIntoWorkspace(workspaceId: string, rootNodeId: string, nodes: ApiNode[], edges: ApiEdge[]) {
+  function mergeGraphIntoWorkspace(workspaceId: string, workspaceRootNodeId: string, nodes: ApiNode[], edges: ApiEdge[]) {
     const wsNodeId = `ws_${workspaceId}`;
+    const workspace = workspaces.find((w) => w.workspace_id === workspaceId);
     const graphPaperMap = buildPaperMapFromGraph(nodes, edges);
     setExtraPapers((prev) => {
       const next = new Map(prev.map((p) => [p.id, p]));
+
+      // Ensure ws_xxx node exists under 'workspaces'
+      if (!next.has(wsNodeId)) {
+        next.set(wsNodeId, {
+          id: wsNodeId,
+          title: workspace?.name ?? workspaceId,
+          description: 'ドキュメントと知識グラフ',
+          hue: 200,
+          parentId: 'workspaces',
+          childIds: [workspaceRootNodeId],
+          content: (
+            <WorkspacePaper
+              workspaceId={workspaceId}
+              workspaceName={workspace?.name ?? workspaceId}
+              childPapers={[]}
+              onSelectPaper={() => {}}
+            />
+          ),
+        });
+      }
+
       for (const [id, paper] of graphPaperMap) {
-        if (id === rootNodeId) {
+        if (id === workspaceRootNodeId) {
           const existing = next.get(id);
           if (existing) {
             const mergedChildIds = Array.from(new Set([...existing.childIds, ...paper.childIds]));
-            next.set(id, { ...existing, childIds: mergedChildIds });
+            next.set(id, { ...existing, ...paper, childIds: mergedChildIds, parentId: wsNodeId });
           } else {
             next.set(id, { ...paper, parentId: wsNodeId });
           }
           continue;
         }
-
         const existing = next.get(id);
         if (existing) {
           const mergedChildIds = Array.from(new Set([...existing.childIds, ...paper.childIds]));
-          next.set(id, {
-            ...existing,
-            ...paper,
-            childIds: mergedChildIds,
-            parentId: paper.parentId ?? existing.parentId,
-          });
+          next.set(id, { ...existing, ...paper, childIds: mergedChildIds, parentId: paper.parentId ?? existing.parentId });
         } else {
           next.set(id, paper);
         }
       }
+
+      // Update ws_xxx childIds and WorkspacePaper with actual child nodes
+      const graphRoot = next.get(workspaceRootNodeId);
+      if (graphRoot) {
+        const childPapers = graphRoot.childIds
+          .map((cid) => { const c = next.get(cid); return c ? { id: c.id, title: c.title } : null; })
+          .filter((p): p is { id: string; title: string } => p !== null);
+        next.set(wsNodeId, {
+          ...next.get(wsNodeId)!,
+          childIds: [workspaceRootNodeId],
+          content: (
+            <WorkspacePaper
+              workspaceId={workspaceId}
+              workspaceName={workspace?.name ?? workspaceId}
+              childPapers={childPapers}
+              onSelectPaper={(paperId) => {
+                setExpansionMap((prevExpansion) => {
+                  const nextExpansion = new Map(prevExpansion);
+                  nextExpansion.set('workspaces', { openChildIds: [wsNodeId] });
+                  nextExpansion.set(wsNodeId, { openChildIds: [workspaceRootNodeId] });
+                  nextExpansion.set(workspaceRootNodeId, {
+                    openChildIds: Array.from(new Set([...(nextExpansion.get(workspaceRootNodeId)?.openChildIds ?? []), paperId])),
+                  });
+                  return nextExpansion;
+                });
+                setFocusedNodeId(paperId);
+              }}
+            />
+          ),
+        });
+      }
+
       return Array.from(next.values());
     });
   }
 
-  async function loadSubtreeForNode(workspaceId: string, nodeId: string, maxDepth = 1) {
+  async function loadSubtreeForNode(workspaceId: string, workspaceRootNodeId: string, nodeId: string, maxDepth = 1) {
     if (loadingSubtreeNodesRef.current.has(nodeId) || loadedSubtreeNodesRef.current.has(nodeId)) {
       return;
     }
-
     loadingSubtreeNodesRef.current.add(nodeId);
     try {
       const subtree = await getSubtree(workspaceId, nodeId, maxDepth);
       const { nodes, edges } = mapSubtreeToApi(subtree);
-
       for (const node of subtree.nodes) {
         nodeWorkspaceRef.current.set(node.id, workspaceId);
         nodeHasChildrenRef.current.set(node.id, node.has_children);
       }
-
-      mergeGraphIntoWorkspace(workspaceId, nodeId, nodes, edges);
+      mergeGraphIntoWorkspace(workspaceId, workspaceRootNodeId, nodes, edges);
       loadedSubtreeNodesRef.current.add(nodeId);
     } catch (err) {
       console.error('Failed to load subtree:', err);
@@ -250,43 +300,28 @@ export default function LandingPage() {
     }
   }
 
-  async function handleExploreGraph(workspaceId: string) {
-    const wsNodeId = `ws_${workspaceId}`;
-    const graph = await getGraph(workspaceId, { levelFilters: [0] });
-    if (graph.nodes.length === 0) return;
-
-    const rootNodeId = findRootNodeId(graph.nodes, graph.edges) ?? graph.nodes[0]?.id;
-    if (!rootNodeId) return;
-
-    await loadSubtreeForNode(workspaceId, rootNodeId, 1);
-
-    pendingOpenRef.current = { parentId: wsNodeId, childId: rootNodeId, spotlight: false };
-  }
-
-  function handleExpansionMapChange(expansionMap: ExpansionMap) {
-    setExpansionMap(expansionMap);
+  function handleExpansionMapChange(next: ExpansionMap) {
+    setExpansionMap(next);
 
     const prev = prevExpansionRef.current;
     const newlyOpened: string[] = [];
-
-    for (const [parentId, entry] of expansionMap) {
+    for (const [parentId, entry] of next) {
       const currentIds = entry?.openChildIds ?? [];
       const prevIds = prev.get(parentId)?.openChildIds ?? [];
       const prevSet = new Set(prevIds);
       for (const childId of currentIds) {
-        if (!prevSet.has(childId)) {
-          newlyOpened.push(childId);
-        }
+        if (!prevSet.has(childId)) newlyOpened.push(childId);
       }
     }
-
-    prevExpansionRef.current = expansionMap;
+    prevExpansionRef.current = next;
 
     for (const nodeId of newlyOpened) {
       if (!nodeHasChildrenRef.current.get(nodeId)) continue;
       const workspaceId = nodeWorkspaceRef.current.get(nodeId);
       if (!workspaceId) continue;
-      void loadSubtreeForNode(workspaceId, nodeId, 1);
+      const workspaceRootNodeId = workspaceRootNodeRef.current.get(workspaceId);
+      if (!workspaceRootNodeId) continue;
+      void loadSubtreeForNode(workspaceId, workspaceRootNodeId, nodeId, 1);
     }
   }
 
@@ -353,7 +388,7 @@ export default function LandingPage() {
           expansionMap={expansionMap}
           focusedNodeId={focusedNodeId}
           isFullscreen={isFullscreen}
-          debug={true}
+          debug={false}
           onExpansionMapChange={handleExpansionMapChange}
           onFocusedNodeIdChange={setFocusedNodeId}
           onFullscreenChange={setIsFullscreen}
