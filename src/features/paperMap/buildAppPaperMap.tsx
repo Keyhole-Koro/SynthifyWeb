@@ -1,5 +1,5 @@
 import { buildPaperMap } from '@keyhole-koro/paper-in-paper';
-import type { Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
+import type { PaperMap } from '@keyhole-koro/paper-in-paper';
 import { type User } from 'firebase/auth';
 import { type Workspace } from '@/features/workspaces/api';
 import { AuthPaper, type AuthMode } from '@/features/auth/AuthPaper';
@@ -13,7 +13,6 @@ export function buildAppPaperMap({
   workspaces,
   authMode,
   loading,
-  extraPapers,
   onAuthModeChange,
   onEmailSubmit,
   onGoogleSubmit,
@@ -25,7 +24,6 @@ export function buildAppPaperMap({
   workspaces: Workspace[];
   authMode: AuthMode;
   loading: boolean;
-  extraPapers: Paper[];
   onAuthModeChange: (mode: AuthMode) => void;
   onEmailSubmit: () => void;
   onGoogleSubmit: () => void;
@@ -33,11 +31,9 @@ export function buildAppPaperMap({
   onOpenWorkspace: (workspaceId: string) => void;
   onCreateWorkspace: (name: string) => Promise<void>;
 }): PaperMap {
-  const wsNodeIds = extraPapers
-    .filter((p) => p.parentId === 'workspaces')
-    .map((p) => p.id);
+  const wsNodeIds = workspaces.map((w) => w.workspace_id);
 
-  const paperMap = buildPaperMap([...STATIC_PAPERS, ...extraPapers]);
+  const paperMap = buildPaperMap(STATIC_PAPERS);
 
   // root content: ログイン後はワークスペースリンクに切り替え
   const rootPaper = paperMap.get(ROOT_ID);

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { AuthMode } from '@/features/auth/AuthPaper';
-import type { ExpansionMap } from '@keyhole-koro/paper-in-paper';
+import type { ExpansionMap, PaperCanvasHandle } from '@keyhole-koro/paper-in-paper';
 import { buildAppPaperMap, ROOT_ID } from '@/features/paperMap/buildAppPaperMap';
 import { createWorkspace } from '@/features/workspaces/api';
 import { useAuthState } from '@/features/auth/useAuthState';
@@ -35,11 +35,17 @@ export default function LandingPage() {
     return m;
   });
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>('auth');
+  const canvasRef = useRef<PaperCanvasHandle>(null);
+  const getWorkspaceName = useCallback(
+    (id: string) => workspaces.find((w) => w.workspace_id === id)?.name ?? id,
+    [workspaces],
+  );
 
-  const { extraPapers, handleOpenWorkspace, handleExpansionMapChange, resetGraph } = useWorkspaceGraph(
-    workspaces,
+  const { handleOpenWorkspace, handleExpansionMapChange, resetGraph } = useWorkspaceGraph(
+    getWorkspaceName,
     setExpansionMap,
     setFocusedNodeId,
+    canvasRef,
   );
 
   // workspacesノードが開いているとき全画面にする
@@ -70,7 +76,6 @@ export default function LandingPage() {
         workspaces,
         authMode,
         loading,
-        extraPapers,
         onAuthModeChange: setAuthMode,
         onEmailSubmit: handleEmailSubmit,
         onGoogleSubmit: handleGoogleSubmit,
@@ -79,7 +84,7 @@ export default function LandingPage() {
         onCreateWorkspace: handleCreateWorkspace,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, workspaces, authMode, loading, extraPapers],
+    [user, workspaces, authMode, loading],
   );
 
   return (
@@ -138,6 +143,7 @@ export default function LandingPage() {
         })()}
       >
         <PaperCanvas
+          ref={canvasRef}
           paperMap={paperMap}
           rootId={ROOT_ID}
           expansionMap={expansionMap}

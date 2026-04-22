@@ -1,6 +1,6 @@
 import { buildPaperMap } from '@keyhole-koro/paper-in-paper';
 import type { Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
-import type { ApiNode, ApiEdge } from './api';
+import type { ApiNode, ApiEdge, Subtree } from './api';
 
 const DEFAULT_HUE = 220;
 
@@ -51,6 +51,32 @@ export function findUnplacedNodeIds(nodes: ApiNode[], edges: ApiEdge[]): string[
   // If there are multiple root candidates, treat non-level-0 nodes as unplaced.
   const roots = nodes.filter((n) => !connectedByHierarchy.has(n.id));
   return roots.filter((n) => n.level > 0).map((n) => n.id);
+}
+
+/** Subtree レスポンスから直接 PaperMap を構築する。ApiNode/Edge への変換を省く。 */
+export function buildPaperMapFromSubtree(subtree: Subtree): PaperMap {
+  const childMap = new Map<string, string[]>();
+  const parentMap = new Map<string, string>();
+
+  for (const edge of subtree.edges) {
+    if (edge.type === 'hierarchical') {
+      if (!childMap.has(edge.source)) childMap.set(edge.source, []);
+      childMap.get(edge.source)!.push(edge.target);
+      parentMap.set(edge.target, edge.source);
+    }
+  }
+
+  const papers: Paper[] = subtree.nodes.map((node) => ({
+    id: node.id,
+    title: node.label,
+    description: node.description,
+    content: node.summary_html ? node.summary_html : `<p>${node.description}</p>`,
+    hue: DEFAULT_HUE,
+    parentId: parentMap.get(node.id) ?? null,
+    childIds: childMap.get(node.id) ?? [],
+  }));
+
+  return buildPaperMap(papers);
 }
 
 /** Returns the root node ID (level 0 or a node without a parent). */
