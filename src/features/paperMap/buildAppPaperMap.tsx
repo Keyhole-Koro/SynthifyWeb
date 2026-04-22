@@ -31,7 +31,7 @@ export function buildAppPaperMap({
   onOpenWorkspace: (workspaceId: string) => void;
   onCreateWorkspace: (name: string) => Promise<void>;
 }): PaperMap {
-  const wsNodeIds = workspaces.map((w) => w.workspace_id);
+  const wsNodeIds = workspaces.map((w) => w.workspaceId);
 
   const paperMap = buildPaperMap(STATIC_PAPERS);
 

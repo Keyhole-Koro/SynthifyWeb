@@ -27,7 +27,7 @@ export function buildPaperMapFromGraph(nodes: ApiNode[], edges: ApiEdge[]): Pape
     id: node.id,
     title: node.label,
     description: node.description,
-    content: node.summary_html || `<p>${node.description}</p>`,
+    content: node.summaryHtml || `<p>${node.description}</p>`,
     hue: DEFAULT_HUE,
     parentId: parentMap.get(node.id) ?? null,
     childIds: childMap.get(node.id) ?? [],

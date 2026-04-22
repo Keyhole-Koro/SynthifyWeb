@@ -37,7 +37,7 @@ export default function LandingPage() {
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>('auth');
   const canvasRef = useRef<PaperCanvasHandle>(null);
   const getWorkspaceName = useCallback(
-    (id: string) => workspaces.find((w) => w.workspace_id === id)?.name ?? id,
+    (id: string) => workspaces.find((w) => w.workspaceId === id)?.name ?? id,
     [workspaces],
   );
 
@@ -66,7 +66,7 @@ export default function LandingPage() {
   async function handleCreateWorkspace(name: string) {
     const ws = await createWorkspace(name);
     setWorkspaces((prev) => [...prev, ws]);
-    void handleOpenWorkspace(ws.workspace_id);
+    void handleOpenWorkspace(ws.workspaceId);
   }
 
   const paperMap = useMemo(

@@ -45,9 +45,9 @@ export function WorkspaceListContent({ workspaces, loading, onOpenWorkspace, onC
           <div style={{ display: 'grid', gap: 6 }}>
             {workspaces.map((ws) => (
               <a
-                key={ws.workspace_id}
-                data-paper-id={ws.workspace_id}
-                onPointerDown={(e) => { e.stopPropagation(); onOpenWorkspace(ws.workspace_id); }}
+                key={ws.workspaceId}
+                data-paper-id={ws.workspaceId}
+                onPointerDown={(e) => { e.stopPropagation(); onOpenWorkspace(ws.workspaceId); }}
                 onPointerUp={(e) => e.stopPropagation()}
                 style={{ display: 'block', width: '100%', textAlign: 'left', border: '1px solid var(--link-border)', background: 'var(--link-bg)', borderRadius: 8, padding: '10px 12px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', textDecoration: 'none' }}
               >

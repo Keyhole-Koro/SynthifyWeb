@@ -1,125 +1,40 @@
-import { callRPC } from '@/lib/rpc';
+import { createRPCClient } from '@/lib/connect';
 import { auth } from '@/lib/firebase';
 import { env } from '@/config/env';
+import { GraphService } from '@/gen/synthify/graph/v1/graph_pb';
+import { NodeService } from '@/gen/synthify/graph/v1/node_pb';
+import { GraphProjectionScope } from '@/gen/synthify/graph/v1/graph_types_pb';
 
-export interface ApiNode {
-  id: string;
-  scope: 'document' | 'canonical';
-  label: string;
-  level: number;
-  description: string;
-  summary_html?: string;
-}
+export type { Node as ApiNode, Edge as ApiEdge } from '@/gen/synthify/graph/v1/graph_types_pb';
+export type { EntityRef, GraphEntityDetail } from '@/gen/synthify/graph/v1/node_pb';
+export { GraphProjectionScope } from '@/gen/synthify/graph/v1/graph_types_pb';
 
-export interface ApiEdge {
-  id: string;
-  source: string;
-  target: string;
-  type: string;
-  scope: 'document' | 'canonical';
-}
-
-export interface Graph {
-  nodes: ApiNode[];
-  edges: ApiEdge[];
-}
-
-export interface EntityRef {
-  workspace_id: string;
-  scope: 'document' | 'canonical';
-  id: string;
-  document_id?: string;
-}
-
-export interface GraphEntityDetail {
-  ref: EntityRef;
-  node: ApiNode;
-  related_edges: ApiEdge[];
-  evidence: {
-    source_chunks: Array<{
-      chunk_id: string;
-      document_id: string;
-      heading: string;
-      text: string;
-      source_page?: number;
-    }>;
-    source_document_ids: string[];
-  };
-  representative_nodes: ApiNode[];
-}
-
-interface ConnectNode {
-  id: string;
-  scope: string;
-  label: string;
-  level: number;
-  description: string;
-  summaryHtml?: string;
-}
-
-interface ConnectEdge {
-  id: string;
-  source: string;
-  target: string;
-  type: string;
-  scope: string;
-}
-
-interface ConnectGraph {
-  nodes: ConnectNode[];
-  edges: ConnectEdge[];
-}
-
-function mapScope(scope: string): ApiNode['scope'] {
-  return scope === 'GRAPH_PROJECTION_SCOPE_CANONICAL' ? 'canonical' : 'document';
-}
-
-function mapNode(node: ConnectNode): ApiNode {
-  return {
-    id: node.id,
-    scope: mapScope(node.scope),
-    label: node.label,
-    level: node.level,
-    description: node.description,
-    summary_html: node.summaryHtml,
-  };
-}
-
-function mapEdge(edge: ConnectEdge): ApiEdge {
-  return {
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    type: edge.type,
-    scope: edge.scope === 'GRAPH_PROJECTION_SCOPE_CANONICAL' ? 'canonical' : 'document',
-  };
-}
-
-function mapGraph(graph: ConnectGraph): Graph {
-  return {
-    nodes: (graph.nodes ?? []).map(mapNode),
-    edges: (graph.edges ?? []).map(mapEdge),
-  };
-}
-
-function scopeToProto(scope: EntityRef['scope']): string {
-  return scope === 'canonical' ? 'GRAPH_PROJECTION_SCOPE_CANONICAL' : 'GRAPH_PROJECTION_SCOPE_DOCUMENT';
-}
+const graphClient = createRPCClient(GraphService);
+const nodeClient = createRPCClient(NodeService);
 
 export async function getGraph(
   workspaceId: string,
   opts: { levelFilters?: number[] } = {},
-): Promise<Graph> {
-  const res = await callRPC<
-    { workspaceId: string; levelFilters?: number[] },
-    { graph: ConnectGraph }
-  >('GraphService', 'GetGraph', {
+) {
+  const res = await graphClient.getGraph({
     workspaceId,
-    levelFilters: opts.levelFilters,
+    levelFilters: opts.levelFilters ?? [],
   });
-  return mapGraph(res.graph);
+  return res.graph!;
 }
 
+export async function getGraphEntityDetail(
+  targetRef: { workspaceId: string; scope: GraphProjectionScope; id: string; documentId?: string },
+  resolveAliases = false,
+) {
+  const res = await nodeClient.getGraphEntityDetail({
+    targetRef,
+    resolveAliases,
+  });
+  return res.detail!;
+}
+
+// Subtree は REST エンドポイントのまま維持
 export interface SubtreeNode {
   id: string;
   label: string;
@@ -159,62 +74,4 @@ export async function getSubtree(
     throw new Error(err.message ?? res.statusText);
   }
   return res.json() as Promise<Subtree>;
-}
-
-export async function getGraphEntityDetail(
-  targetRef: EntityRef,
-  resolveAliases = false,
-): Promise<GraphEntityDetail> {
-  const res = await callRPC<
-    {
-      targetRef: { workspaceId: string; scope: string; id: string; documentId?: string };
-      resolveAliases: boolean;
-    },
-    {
-      detail: {
-        ref: { workspaceId: string; scope: string; id: string; documentId?: string };
-        node: ConnectNode;
-        relatedEdges: ConnectEdge[];
-        evidence: {
-          sourceChunks: Array<{
-            chunkId: string;
-            documentId: string;
-            text: string;
-            sourcePage?: number;
-          }>;
-          sourceDocumentIds: string[];
-        };
-        representativeNodes: ConnectNode[];
-      };
-    }
-  >('NodeService', 'GetGraphEntityDetail', {
-    targetRef: {
-      workspaceId: targetRef.workspace_id,
-      scope: scopeToProto(targetRef.scope),
-      id: targetRef.id,
-      documentId: targetRef.document_id,
-    },
-    resolveAliases,
-  });
-  return {
-    ref: {
-      workspace_id: res.detail.ref.workspaceId,
-      scope: res.detail.ref.scope === 'GRAPH_PROJECTION_SCOPE_CANONICAL' ? 'canonical' : 'document',
-      id: res.detail.ref.id,
-      document_id: res.detail.ref.documentId,
-    },
-    node: mapNode(res.detail.node),
-    related_edges: (res.detail.relatedEdges ?? []).map(mapEdge),
-    evidence: {
-      source_chunks: (res.detail.evidence?.sourceChunks ?? []).map((chunk) => ({
-        chunk_id: chunk.chunkId,
-        document_id: chunk.documentId,
-        heading: '',
-        text: chunk.text,
-        source_page: chunk.sourcePage,
-      })),
-      source_document_ids: res.detail.evidence?.sourceDocumentIds ?? [],
-    },
-    representative_nodes: (res.detail.representativeNodes ?? []).map(mapNode),
-  };
 }

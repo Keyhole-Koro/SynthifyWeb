@@ -54,14 +54,14 @@ export function WorkspacePaper({ workspaceId, workspaceName, childPapers, onSele
     setUploading(true);
     setUploadError(null);
     try {
-      const { document, upload_url } = await createDocument(
+      const { document, uploadUrl } = await createDocument(
         workspaceId,
         file.name,
         file.type || 'application/octet-stream',
         file.size,
       );
-      await uploadFile(upload_url, file);
-      await startProcessing(document.document_id);
+      await uploadFile(uploadUrl, file);
+      await startProcessing(document.documentId);
       setDocs((prev) => [document, ...prev]);
     } catch (err) {
       setUploadError(String(err));
@@ -111,13 +111,13 @@ export function WorkspacePaper({ workspaceId, workspaceName, childPapers, onSele
         ) : (
           <div style={{ marginBottom: 8 }}>
             {docs.slice(0, 6).map((doc) => (
-              <div key={doc.document_id} style={s.docItem}>
+              <div key={doc.documentId} style={s.docItem}>
                 <svg style={{ flexShrink: 0, width: 12, height: 12, color: 'var(--muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span style={s.filename}>{doc.filename}</span>
                 <span style={{ fontSize: '0.65rem', color: 'var(--muted)', flexShrink: 0 }}>
-                  {formatDate(doc.created_at)}
+                  {formatDate(doc.createdAt)}
                 </span>
               </div>
             ))}
