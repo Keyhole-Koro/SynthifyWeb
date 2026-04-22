@@ -207,10 +207,9 @@ function mapSubtreeToApi(subtree: Subtree): { nodes: ApiNode[]; edges: ApiEdge[]
   return {
     nodes: subtree.nodes.map((node) => ({
       id: node.id,
-      scope: 'canonical',
+      scope: 'document',
       label: node.label,
-      level: 0,
-      entity_type: node.entity_type,
+      level: node.level,
       description: node.description,
       summary_html: node.summary_html,
     })),
@@ -219,7 +218,7 @@ function mapSubtreeToApi(subtree: Subtree): { nodes: ApiNode[]; edges: ApiEdge[]
       source: edge.source,
       target: edge.target,
       type: edge.type,
-      scope: 'canonical',
+      scope: 'document',
     })),
   };
 }

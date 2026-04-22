@@ -4,11 +4,9 @@ import { env } from '@/config/env';
 
 export interface ApiNode {
   id: string;
-  canonical_node_id?: string;
   scope: 'document' | 'canonical';
   label: string;
   level: number;
-  entity_type?: string;
   description: string;
   summary_html?: string;
 }
@@ -52,14 +50,11 @@ export interface GraphEntityDetail {
 
 interface ConnectNode {
   id: string;
-  canonicalNodeId?: string;
   scope: string;
   label: string;
   level: number;
-  entityType?: string;
   description: string;
   summaryHtml?: string;
-  documentId?: string;
 }
 
 interface ConnectEdge {
@@ -79,31 +74,12 @@ function mapScope(scope: string): ApiNode['scope'] {
   return scope === 'GRAPH_PROJECTION_SCOPE_CANONICAL' ? 'canonical' : 'document';
 }
 
-function mapEntityType(entityType?: string): string | undefined {
-  switch (entityType) {
-    case 'NODE_ENTITY_TYPE_ORGANIZATION':
-      return 'organization';
-    case 'NODE_ENTITY_TYPE_PERSON':
-      return 'person';
-    case 'NODE_ENTITY_TYPE_METRIC':
-      return 'metric';
-    case 'NODE_ENTITY_TYPE_DATE':
-      return 'date';
-    case 'NODE_ENTITY_TYPE_LOCATION':
-      return 'location';
-    default:
-      return undefined;
-  }
-}
-
 function mapNode(node: ConnectNode): ApiNode {
   return {
     id: node.id,
-    canonical_node_id: node.canonicalNodeId,
     scope: mapScope(node.scope),
     label: node.label,
     level: node.level,
-    entity_type: mapEntityType(node.entityType),
     description: node.description,
     summary_html: node.summaryHtml,
   };
@@ -147,7 +123,7 @@ export async function getGraph(
 export interface SubtreeNode {
   id: string;
   label: string;
-  entity_type?: string;
+  level: number;
   description: string;
   summary_html?: string;
   has_children: boolean;
