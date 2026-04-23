@@ -1,158 +1,57 @@
-'use client';
+import React from 'react';
 
-import { useEffect, useRef, useState } from 'react';
-import {
-  listDocuments,
-  createDocument,
-  uploadFile,
-  startProcessing,
-  type Document,
-} from '@/features/documents/api';
-
-interface Props {
+interface WorkspacePaperProps {
   workspaceId: string;
   workspaceName: string;
-  childPapers: Array<{ id: string; title: string }>;
-  onSelectPaper: (paperId: string) => void;
+  childItems: { id: string; title: string }[];
+  onSelectItem: (itemId: string) => void;
 }
 
-const s = {
-  section: { marginBottom: 12 } as React.CSSProperties,
-  label: { fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: 'var(--muted)', marginBottom: 6 },
-  docItem: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 0', borderBottom: '1px solid var(--line)', fontSize: '0.78rem' } as React.CSSProperties,
-  filename: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  btn: (variant: 'primary' | 'secondary' | 'ghost' = 'secondary'): React.CSSProperties => ({
-    border: variant === 'ghost' ? 'none' : '1px solid var(--link-border)',
-    background: variant === 'primary' ? 'var(--accent)' : variant === 'ghost' ? 'transparent' : 'var(--link-bg)',
-    color: variant === 'primary' ? '#fff' : 'var(--accent)',
-    borderRadius: 6,
-    padding: '5px 10px',
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    width: '100%',
-  }),
-};
-
-export function WorkspacePaper({ workspaceId, workspaceName, childPapers, onSelectPaper }: Props) {
-  const [docs, setDocs] = useState<Document[]>([]);
-  const [docsLoading, setDocsLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    listDocuments(workspaceId)
-      .then(setDocs)
-      .catch(console.error)
-      .finally(() => setDocsLoading(false));
-  }, [workspaceId]);
-
-  async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const { document, uploadUrl } = await createDocument(
-        workspaceId,
-        file.name,
-        file.type || 'application/octet-stream',
-        file.size,
-      );
-      await uploadFile(uploadUrl, file);
-      await startProcessing(document.documentId);
-      setDocs((prev) => [document, ...prev]);
-    } catch (err) {
-      setUploadError(String(err));
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  function stopPointerPropagation(e: React.PointerEvent) {
-    e.stopPropagation();
-  }
-
+export function WorkspacePaper({
+  workspaceName,
+  childItems,
+  onSelectItem,
+}: WorkspacePaperProps) {
   return (
-    <div style={{ paddingTop: 2 }}>
-      <div style={s.section}>
-        <p style={s.label}>{workspaceName}</p>
+    <div className="flex h-full flex-col p-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-stone-800">{workspaceName}</h2>
+        <p className="text-xs text-stone-500">Tree Structure</p>
+      </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <p style={s.label}>Paper Nodes</p>
-          {childPapers.length === 0 ? (
-            <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 8 }}>
-              まだ paper node がありません
-            </p>
-          ) : (
-            <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-              {childPapers.map((paper) => (
-                <button
-                  key={paper.id}
-                  style={{ ...s.btn('ghost'), textAlign: 'left', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 8 }}
-                  onPointerDown={stopPointerPropagation}
-                  onPointerUp={stopPointerPropagation}
-                  onClick={() => onSelectPaper(paper.id)}
-                >
-                  {paper.title}
-                </button>
-              ))}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+          Root Items
+        </div>
+        <div className="space-y-1">
+          {childItems.length === 0 && (
+            <div className="py-8 text-center text-sm text-stone-400">
+              No items synthesized yet.
             </div>
           )}
+          {childItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onSelectItem(item.id)}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-stone-600 transition-colors hover:bg-stone-100 hover:text-indigo-600"
+            >
+              <svg className="h-4 w-4 shrink-0 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span className="truncate">{item.title}</span>
+            </button>
+          ))}
         </div>
+      </div>
 
-        {docsLoading ? (
-          <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>読み込み中…</p>
-        ) : docs.length === 0 ? (
-          <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 8 }}>
-            ドキュメントがありません
-          </p>
-        ) : (
-          <div style={{ marginBottom: 8 }}>
-            {docs.slice(0, 6).map((doc) => (
-              <div key={doc.documentId} style={s.docItem}>
-                <svg style={{ flexShrink: 0, width: 12, height: 12, color: 'var(--muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span style={s.filename}>{doc.filename}</span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--muted)', flexShrink: 0 }}>
-                  {formatDate(doc.createdAt)}
-                </span>
-              </div>
-            ))}
-            {docs.length > 6 && (
-              <p style={{ fontSize: '0.7rem', color: 'var(--muted)', marginTop: 4 }}>
-                他 {docs.length - 6} 件
-              </p>
-            )}
-          </div>
-        )}
-
-        <input
-          ref={fileRef}
-          type="file"
-          style={{ display: 'none' }}
-          accept=".pdf,.txt,.md,.docx"
-          onChange={(e) => handleFiles(e.target.files)}
-        />
-        <button
-          style={s.btn('secondary')}
-          onPointerDown={stopPointerPropagation}
-          onPointerUp={stopPointerPropagation}
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-        >
-          {uploading ? 'アップロード中…' : '+ ドキュメントを追加'}
+      <div className="mt-4 border-t border-stone-100 pt-3">
+        <button className="flex w-full items-center justify-center gap-2 rounded-md bg-stone-50 py-2 text-xs font-medium text-stone-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600">
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Item
         </button>
-        {uploadError && (
-          <p style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: 4 }}>{uploadError}</p>
-        )}
       </div>
     </div>
   );
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
 }

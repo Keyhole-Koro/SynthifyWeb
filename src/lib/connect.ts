@@ -1,22 +1,21 @@
 import { createClient } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-web';
-import type { DescService } from '@bufbuild/protobuf';
-import { auth } from '@/lib/firebase';
 import { env } from '@/config/env';
+import { getAuthHeaders } from '@/features/auth/session';
 
 const transport = createConnectTransport({
   baseUrl: env.apiBaseUrl,
   interceptors: [
     (next) => async (req) => {
-      if (auth.currentUser) {
-        const token = await auth.currentUser.getIdToken();
-        req.header.set('Authorization', `Bearer ${token}`);
+      const authHeaders = await getAuthHeaders();
+      for (const [key, value] of Object.entries(authHeaders)) {
+        req.header.set(key, value);
       }
       return next(req);
     },
   ],
 });
 
-export function createRPCClient<T extends DescService>(service: T) {
-  return createClient(service, transport);
+export function createRPCClient(service: any) {
+  return createClient(service, transport) as any;
 }

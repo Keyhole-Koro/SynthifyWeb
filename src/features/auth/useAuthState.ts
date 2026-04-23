@@ -1,35 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, type User, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { listWorkspaces, type Workspace } from '@/features/workspaces/api';
+import { getInitialAuthUser, signInWithGoogleSession, subscribeAuthUser, type AuthUser, isE2EAuthEnabled } from '@/features/auth/session';
 
 export function useAuthState() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(getInitialAuthUser);
   const [loading, setLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        try {
-          const ws = await listWorkspaces();
-          setWorkspaces(ws);
-        } catch (err) {
-          console.error('Failed to list workspaces:', err);
-        }
+    return subscribeAuthUser((nextUser) => {
+      setUser(nextUser);
+      if (!nextUser) {
+        setWorkspaces([]);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      void listWorkspaces()
+        .then(setWorkspaces)
+        .catch((err) => {
+          console.error('Failed to list workspaces:', err);
+        })
+        .finally(() => setLoading(false));
     });
   }, []);
 
   async function handleGoogleSubmit() {
+    if (isE2EAuthEnabled()) {
+      return;
+    }
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithGoogleSession();
     } catch (err) {
       console.error(err);
       alert('ログインに失敗しました。');

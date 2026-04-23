@@ -1,5 +1,5 @@
-import { auth } from '@/lib/firebase';
 import { env } from '@/config/env';
+import { getAuthHeaders } from '@/features/auth/session';
 
 export class ApiError extends Error {
   constructor(
@@ -15,12 +15,9 @@ function isFirebaseAuthNetworkError(error: unknown): error is { code: string; me
   return !!error && typeof error === 'object' && 'code' in error && error.code === 'auth/network-request-failed';
 }
 
-async function getAuthToken(): Promise<string | undefined> {
-  if (!auth.currentUser) {
-    return undefined;
-  }
+async function getRequestAuthHeaders(): Promise<Record<string, string>> {
   try {
-    return await auth.currentUser.getIdToken();
+    return await getAuthHeaders();
   } catch (error) {
     if (isFirebaseAuthNetworkError(error)) {
       const emulatorNote = env.firebase.authEmulatorUrl
@@ -37,14 +34,14 @@ export async function callRPC<Req, Res>(
   method: string,
   body: Req,
 ): Promise<Res> {
-  const token = await getAuthToken();
-  const url = `${env.apiBaseUrl}/synthify.graph.v1.${service}/${method}`;
+  const authHeaders = await getRequestAuthHeaders();
+  const url = `${env.apiBaseUrl}/synthify.tree.v1.${service}/${method}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders,
       'Connect-Protocol-Version': '1',
     },
     body: JSON.stringify(body),

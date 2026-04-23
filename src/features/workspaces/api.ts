@@ -1,7 +1,7 @@
 import { createRPCClient } from '@/lib/connect';
-import { WorkspaceService } from '@/gen/synthify/graph/v1/workspace_pb';
+import { WorkspaceService } from '@/gen/synthify/tree/v1/workspace_pb';
 
-export type { Workspace } from '@/gen/synthify/graph/v1/workspace_pb';
+export type { Workspace } from '@/gen/synthify/tree/v1/workspace_pb';
 
 const client = createRPCClient(WorkspaceService);
 

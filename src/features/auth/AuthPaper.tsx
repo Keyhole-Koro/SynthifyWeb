@@ -1,9 +1,9 @@
-import { type User } from 'firebase/auth';
+import type { AuthUser } from '@/features/auth/session';
 
 type AuthMode = 'login' | 'register';
 
 type AuthPaperProps = {
-  user: User | null;
+  user: AuthUser | null;
   mode: AuthMode;
   loading: boolean;
   onModeChange: (mode: AuthMode) => void;
@@ -31,7 +31,7 @@ export function AuthPaper({
       <div style={{ paddingTop: 4 }}>
         <div style={{ marginBottom: 16 }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b', margin: '0 0 4px' }}>
-            ようこそ、{user.displayName || user.email} さん
+            ようこそ、{user.name || user.email} さん
           </h3>
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
             トップに戻ってワークスペースを選択してください。

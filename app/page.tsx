@@ -7,9 +7,8 @@ import type { ExpansionMap, PaperCanvasHandle } from '@keyhole-koro/paper-in-pap
 import { buildAppPaperMap, ROOT_ID } from '@/features/paperMap/buildAppPaperMap';
 import { createWorkspace } from '@/features/workspaces/api';
 import { useAuthState } from '@/features/auth/useAuthState';
-import { useWorkspaceGraph } from '@/features/workspaces/useWorkspaceGraph';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useWorkspaceTree } from '@/features/workspaces/useWorkspaceTree';
+import { signOutSession } from '@/features/auth/session';
 
 const PaperCanvas = dynamic(
   () => import('@keyhole-koro/paper-in-paper').then((mod) => mod.PaperCanvas),
@@ -34,17 +33,17 @@ export default function LandingPage() {
     m.set(ROOT_ID, { openChildIds: ['auth'] });
     return m;
   });
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>('auth');
+  const [focusedItemId, setFocusedItemId] = useState<string | null>('auth');
   const canvasRef = useRef<PaperCanvasHandle>(null);
   const getWorkspaceName = useCallback(
     (id: string) => workspaces.find((w) => w.workspaceId === id)?.name ?? id,
     [workspaces],
   );
 
-  const { handleOpenWorkspace, handleExpansionMapChange, resetGraph } = useWorkspaceGraph(
+  const { handleOpenWorkspace, handleExpansionMapChange, resetTree } = useWorkspaceTree(
     getWorkspaceName,
     setExpansionMap,
-    setFocusedNodeId,
+    setFocusedItemId,
     canvasRef,
   );
 
@@ -55,12 +54,12 @@ export default function LandingPage() {
   }, [expansionMap]);
 
   async function handleLogout() {
-    await signOut(auth);
-    resetGraph();
+    await signOutSession();
+    resetTree();
     const m = new Map();
     m.set(ROOT_ID, { openChildIds: ['auth'] });
     setExpansionMap(m);
-    setFocusedNodeId('auth');
+    setFocusedItemId('auth');
   }
 
   async function handleCreateWorkspace(name: string) {
@@ -74,17 +73,8 @@ export default function LandingPage() {
       buildAppPaperMap({
         user,
         workspaces,
-        authMode,
-        loading,
-        onAuthModeChange: setAuthMode,
-        onEmailSubmit: handleEmailSubmit,
-        onGoogleSubmit: handleGoogleSubmit,
-        onLogout: handleLogout,
-        onOpenWorkspace: (workspaceId) => { void handleOpenWorkspace(workspaceId); },
-        onCreateWorkspace: handleCreateWorkspace,
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, workspaces, authMode, loading],
+    [user, workspaces],
   );
 
   return (
@@ -104,7 +94,7 @@ export default function LandingPage() {
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold tracking-tight text-stone-800">Synthify</span>
-            <span className="text-[10px] uppercase tracking-[0.18em] text-stone-400">Knowledge Graph Platform</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-stone-400">Document Tree Platform</span>
           </div>
         </div>
       )}
@@ -113,7 +103,7 @@ export default function LandingPage() {
         <div className="absolute left-1/2 top-[11%] z-10 -translate-x-1/2 text-center select-none whitespace-nowrap">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-500/70 mb-2">Document Intelligence</p>
           <h1 className="text-3xl font-bold tracking-tight text-stone-800 sm:text-4xl">
-            ドキュメントから、<span className="text-indigo-500">知識グラフ</span>へ
+            ドキュメントから、<span className="text-indigo-500">知識構造</span>へ
           </h1>
         </div>
       )}
@@ -147,11 +137,11 @@ export default function LandingPage() {
           paperMap={paperMap}
           rootId={ROOT_ID}
           expansionMap={expansionMap}
-          focusedNodeId={focusedNodeId}
+          focusedNodeId={focusedItemId}
           isFullscreen={isFullscreen}
           debug={false}
           onExpansionMapChange={handleExpansionMapChange}
-          onFocusedNodeIdChange={setFocusedNodeId}
+          onFocusedNodeIdChange={setFocusedItemId}
           onFullscreenChange={setIsFullscreen}
         />
       </div>

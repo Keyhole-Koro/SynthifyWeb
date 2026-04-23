@@ -1,49 +1,34 @@
-import {
-  collection,
-  doc,
-  query,
-  setDoc,
-  onSnapshot,
-  serverTimestamp,
-  type Unsubscribe,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+import { env } from '@/config/env';
 
-export interface PresenceData {
-  user_id: string;
-  node_id?: string | null;
-  updated_at: unknown; // serverTimestamp()
+export interface UserPresence {
+  uid: string;
+  displayName?: string;
+  photoURL?: string;
+  lastActive: string;
+  status: 'online' | 'away' | 'offline';
+  workspace_id?: string | null;
+  item_id?: string | null;
 }
 
-/**
- * ワークスペース内のユーザーの presence 情報を Firestore に書き込む。
- * パス: workspaces/{workspaceId}/presence/{userId}
- */
-export async function updatePresence(
-  workspaceId: string,
-  userId: string,
-  nodeId?: string,
-): Promise<void> {
-  const ref = doc(db, 'workspaces', workspaceId, 'presence', userId);
-  await setDoc(ref, {
-    user_id: userId,
-    node_id: nodeId ?? null,
-    updated_at: serverTimestamp(),
-  });
-}
-
-/**
- * ワークスペースの presence 情報をリアルタイムで購読する。
- * コールバックには全ユーザーの最新 presence データが渡される。
- */
-export function subscribePresence(
-  workspaceId: string,
-  cb: (entries: PresenceData[]) => void,
-): Unsubscribe {
-  const presenceRef = collection(db, 'workspaces', workspaceId, 'presence');
-  const q = query(presenceRef);
-  return onSnapshot(q, (snapshot) => {
-    const entries: PresenceData[] = snapshot.docs.map((d) => d.data() as PresenceData);
-    cb(entries);
+export async function updateUserPresence(
+  status: 'online' | 'away' | 'offline',
+  workspaceId?: string,
+  itemId?: string,
+) {
+  if (!auth.currentUser) return;
+  const token = await auth.currentUser.getIdToken();
+  const url = `${env.apiBaseUrl}/presence/update`;
+  await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      status,
+      workspace_id: workspaceId ?? null,
+      item_id: itemId ?? null,
+    }),
   });
 }

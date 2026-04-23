@@ -1,11 +1,11 @@
 import { createRPCClient } from '@/lib/connect';
-import { DocumentService } from '@/gen/synthify/graph/v1/document_pb';
-import type { Document } from '@/gen/synthify/graph/v1/document_pb';
-import type { Job } from '@/gen/synthify/graph/v1/job_pb';
+import { DocumentService } from '@/gen/synthify/tree/v1/document_pb';
+import type { Document } from '@/gen/synthify/tree/v1/document_pb';
+import type { Job } from '@/gen/synthify/tree/v1/job_pb';
 
-export type { Document } from '@/gen/synthify/graph/v1/document_pb';
-export { DocumentLifecycleState } from '@/gen/synthify/graph/v1/document_pb';
-export type { Job as ProcessingJob } from '@/gen/synthify/graph/v1/job_pb';
+export type { Document } from '@/gen/synthify/tree/v1/document_pb';
+export { DocumentLifecycleState } from '@/gen/synthify/tree/v1/document_pb';
+export type { Job as ProcessingJob } from '@/gen/synthify/tree/v1/job_pb';
 
 const client = createRPCClient(DocumentService);
 
