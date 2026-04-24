@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { AuthMode } from '@/features/auth/AuthPaper';
-import type { ExpansionMap, PaperCanvasHandle } from '@keyhole-koro/paper-in-paper';
-import { buildAppPaperMap, ROOT_ID } from '@/features/paperMap/buildAppPaperMap';
+import type { ExpansionMap, PaperCanvasHandle, Paper } from '@keyhole-koro/paper-in-paper';
+import { ROOT_ID } from '@/features/paperMap/staticPapers';
+import { AuthPaper } from '@/features/auth/AuthPaper';
+import { WorkspaceListContent } from '@/features/paperMap/WorkspaceListContent';
 import { createWorkspace } from '@/features/workspaces/api';
 import { useAuthState } from '@/features/auth/useAuthState';
 import { useWorkspaceTree } from '@/features/workspaces/useWorkspaceTree';
@@ -16,7 +18,7 @@ const PaperCanvas = dynamic(
 );
 
 export default function LandingPage() {
-  const { user, loading, workspaces, setWorkspaces, handleGoogleSubmit, handleEmailSubmit } = useAuthState();
+  const { user, loading, workspaces, workspaceError, setWorkspaces, handleGoogleSubmit, handleEmailSubmit } = useAuthState();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -53,29 +55,88 @@ export default function LandingPage() {
     setIsFullscreen(rootOpenIds.includes('workspaces'));
   }, [expansionMap]);
 
-  async function handleLogout() {
+  const handleLogout = useCallback(async () => {
     await signOutSession();
     resetTree();
     const m = new Map();
     m.set(ROOT_ID, { openChildIds: ['auth'] });
     setExpansionMap(m);
     setFocusedItemId('auth');
-  }
+  }, [resetTree]);
 
-  async function handleCreateWorkspace(name: string) {
+  const handleCreateWorkspace = useCallback(async (name: string) => {
     const ws = await createWorkspace(name);
     setWorkspaces((prev) => [...prev, ws]);
     void handleOpenWorkspace(ws.workspaceId);
-  }
+  }, [handleOpenWorkspace, setWorkspaces]);
 
-  const paperMap = useMemo(
-    () =>
-      buildAppPaperMap({
-        user,
-        workspaces,
-      }),
-    [user, workspaces],
-  );
+  const paperMap = useMemo(() => {
+    const map = new Map<string, Paper>();
+
+    map.set('root', {
+      id: 'root',
+      title: 'Synthify',
+      description: 'Document Intelligence Platform',
+      hue: 220,
+      parentId: null,
+      childIds: ['auth', 'workspaces'],
+      content: '<p>Synthify へようこそ。ドキュメントを知識構造へ変換します。</p>',
+    });
+
+    map.set('auth', {
+      id: 'auth',
+      title: user ? 'アカウント' : 'ログイン',
+      description: '認証とプロファイル',
+      hue: 280,
+      parentId: 'root',
+      childIds: [],
+      content: (
+        <AuthPaper
+          user={user}
+          mode={authMode}
+          loading={loading}
+          onModeChange={setAuthMode}
+          onEmailSubmit={handleEmailSubmit}
+          onGoogleSubmit={handleGoogleSubmit}
+          onLogout={handleLogout}
+          onCreateWorkspace={handleCreateWorkspace}
+        />
+      ),
+    });
+
+    map.set('workspaces', {
+      id: 'workspaces',
+      title: 'ワークスペース',
+      description: 'あなたのプロジェクト一覧',
+      hue: 200,
+      parentId: 'root',
+      childIds: workspaces.map((w) => w.workspaceId),
+      content: (
+        <WorkspaceListContent
+          workspaces={workspaces}
+          loading={loading}
+          error={workspaceError}
+          onOpenWorkspace={handleOpenWorkspace}
+          onCreateWorkspace={handleCreateWorkspace}
+          onLogout={handleLogout}
+        />
+      ),
+    });
+
+    for (const ws of workspaces) {
+      map.set(ws.workspaceId, {
+        id: ws.workspaceId,
+        title: ws.name,
+        description: 'ワークスペースの知識構造',
+        hue: 200,
+        parentId: 'workspaces',
+        childIds: [],
+        content: `<p>${ws.name} ワークスペースを読み込み中...</p>`,
+      });
+    }
+
+    return map;
+  }, [user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>

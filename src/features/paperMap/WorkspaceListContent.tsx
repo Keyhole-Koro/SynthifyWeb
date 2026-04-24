@@ -4,12 +4,13 @@ import { type Workspace } from '@/features/workspaces/api';
 interface Props {
   workspaces: Workspace[];
   loading: boolean;
+  error?: Error | null;
   onOpenWorkspace: (workspaceId: string) => void;
   onCreateWorkspace: (name: string) => Promise<void>;
   onLogout: () => void;
 }
 
-export function WorkspaceListContent({ workspaces, loading, onOpenWorkspace, onCreateWorkspace, onLogout }: Props) {
+export function WorkspaceListContent({ workspaces, loading, error, onOpenWorkspace, onCreateWorkspace, onLogout }: Props) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -33,6 +34,21 @@ export function WorkspaceListContent({ workspaces, loading, onOpenWorkspace, onC
     } finally {
       setCreating(false);
     }
+  }
+
+  if (error) {
+    return (
+      <div style={{ paddingTop: 4 }}>
+        <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, marginBottom: 12 }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#dc2626', margin: '0 0 2px' }}>ワークスペースを読み込めませんでした</p>
+          <p style={{ fontSize: '0.7rem', color: '#ef4444', margin: 0 }}>しばらく時間をおいてから、再度お試しください。</p>
+        </div>
+        <button type="button" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={onLogout}
+          style={{ width: '100%', border: '1px solid #e2e8f0', background: 'white', borderRadius: 6, padding: '8px 0', fontSize: '0.8rem', fontWeight: 500, color: '#64748b', cursor: 'pointer' }}>
+          ログアウト
+        </button>
+      </div>
+    );
   }
 
   return (

@@ -44,7 +44,7 @@ export const STATIC_PAPERS: Paper[] = [
   {
     id: 'root',
     title: 'トップ',
-    description: 'ドキュメントを知識グラフに変換・探索するシステム',
+    description: 'ドキュメントを知識構造に変換・探索するシステム',
     hue: 230,
     content: (
       <section>
@@ -52,7 +52,7 @@ export const STATIC_PAPERS: Paper[] = [
         <div style={{ display: 'grid', gap: 8 }}>
           <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
             複数のドキュメントを読み込み、<PL id="extraction">AIが概念・主張・根拠を抽出</PL>して
-            <PL id="graph" />を自動生成。そのまま<PL id="auth">ワークスペースに入って</PL>
+            <PL id="tree" />を自動生成。そのまま<PL id="auth">ワークスペースに入って</PL>
             <PL id="explore">paper-in-paper形式で探索</PL>できます。
           </p>
           <PL id="auth" variant="card" />
@@ -69,8 +69,8 @@ export const STATIC_PAPERS: Paper[] = [
                 <td style={{ padding: '5px 8px', color: 'var(--muted)' }}>Geminiが概念・主張・根拠・反論を自動識別</td>
               </tr>
               <tr style={{ background: 'var(--surface-alt)' }}>
-                <td style={{ padding: '5px 8px' }}>グラフ化</td>
-                <td style={{ padding: '5px 8px', color: 'var(--muted)' }}>階層・横断リンクを持つ知識グラフを構築</td>
+                <td style={{ padding: '5px 8px' }}>構造化</td>
+                <td style={{ padding: '5px 8px', color: 'var(--muted)' }}>階層・関連リンクを持つ知識ツリーを構築</td>
               </tr>
             </tbody>
           </table>
@@ -78,7 +78,7 @@ export const STATIC_PAPERS: Paper[] = [
       </section>
     ),
     parentId: null,
-    childIds: ['auth', 'workspaces', 'extraction', 'graph', 'explore', 'team'],
+    childIds: ['auth', 'workspaces', 'extraction', 'tree', 'explore', 'team'],
   },
   {
     id: 'workspaces',
@@ -111,7 +111,7 @@ export const STATIC_PAPERS: Paper[] = [
             <li>テキスト正規化・チャンク分割</li>
             <li>エンティティ・概念の抽出</li>
             <li><PL id="canonicalization" /></li>
-            <li>関係エッジの推論</li>
+            <li>親子関係の推論</li>
             <li>重要度スコアリング</li>
             <li>HTMLサマリ生成</li>
           </ul>
@@ -125,22 +125,22 @@ export const STATIC_PAPERS: Paper[] = [
     childIds: ['canonicalization', 'depth'],
   },
   {
-    id: 'graph',
-    title: '知識グラフ',
-    description: '概念間の階層・横断リンクを可視化',
+    id: 'tree',
+    title: '知識構造',
+    description: '概念間の階層・関連リンクを可視化',
     hue: 140,
     content: (
       <section>
-        <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>グラフ構造</h2>
+        <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>ツリー構造</h2>
         <div style={{ display: 'grid', gap: 8 }}>
           <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-            <PL id="hierarchy" />がツリー構造を定義し、<PL id="crosslinks">非階層エッジ</PL>
-            （measured_by・contradicts・supports）が横断的な関係を表現します。
+            <PL id="hierarchy" />が基本構造を定義し、<PL id="crosslinks">関連リンク</PL>
+            （measured_by・contradicts・supports）が補足的な関係を表現します。
           </p>
           <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--surface-raised)' }}>
-                <th style={{ padding: '6px 8px', textAlign: 'left' }}>ノード種別</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left' }}>アイテム種別</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left' }}>役割</th>
               </tr>
             </thead>
@@ -167,15 +167,15 @@ export const STATIC_PAPERS: Paper[] = [
   {
     id: 'explore',
     title: 'paper-in-paper 探索',
-    description: 'ノードをクリックするだけで概念が展開',
+    description: 'アイテムをクリックするだけで概念が展開',
     hue: 280,
     content: (
       <section>
         <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>インタラクティブ探索</h2>
         <div style={{ display: 'grid', gap: 8 }}>
           <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-            ペーパー内のリンクをクリックすると、親の文脈を保ちながら子ノードがインラインで展開されます。
-            <PL id="datalink" />がグラフの横断リンクも再現します。
+            ペーパー内のリンクをクリックすると、親の文脈を保ちながら子アイテムがインラインで展開されます。
+            <PL id="datalink" />が関連リンクも再現します。
           </p>
           <div style={{ borderLeft: '3px solid var(--line)', background: 'var(--surface-alt)', borderRadius: 4, padding: '8px 12px', fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.6 }}>
             このページ自体が paper-in-paper のデモです。ペーパーをクリックして展開してみてください。
@@ -201,7 +201,7 @@ export const STATIC_PAPERS: Paper[] = [
             <li><strong>viewer</strong> - 閲覧のみ</li>
           </ul>
           <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-            各ユーザーの閲覧ノード履歴・追加ノードが記録され、チームの探索状況を把握できます。
+            各ユーザーの閲覧履歴・追加アイテムが記録され、チームの探索状況を把握できます。
           </p>
         </div>
       </section>
@@ -212,13 +212,13 @@ export const STATIC_PAPERS: Paper[] = [
   {
     id: 'canonicalization',
     title: 'エイリアス正規化',
-    description: '同義語・表記揺れを同一ノードに統合',
+    description: '同義語・表記揺れを同一アイテムに統合',
     hue: 200,
     content: (
       <section>
         <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>正規化の仕組み</h2>
         <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-          Gemini が候補を提案し、コサイン類似度 + 人手ルールで同義語を一つの canonical ノードに統合します。元の document ノードは参照として残ります。
+          Gemini が候補を提案し、コサイン類似度 + 人手ルールで同義語を一つの canonical アイテムに統合します。元の document 出典は参照として残ります。
         </p>
       </section>
     ),
@@ -235,10 +235,10 @@ export const STATIC_PAPERS: Paper[] = [
         <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>抽出深度の選択</h2>
         <div style={{ display: 'grid', gap: 8 }}>
           <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-            <strong>詳細</strong>：全チャンクを処理し豊富なグラフを生成（時間がかかる）。
+            <strong>詳細</strong>：全チャンクを処理し豊富なツリーを生成（時間がかかる）。
           </p>
           <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-            <strong>要約のみ</strong>：高速だが粗めのグラフ。プロトタイプ確認に最適。
+            <strong>要約のみ</strong>：高速だが粗めの構造。プロトタイプ確認に最適。
           </p>
         </div>
       </section>
@@ -248,40 +248,40 @@ export const STATIC_PAPERS: Paper[] = [
   },
   {
     id: 'hierarchy',
-    title: '階層エッジ',
-    description: 'ツリー構造を定義するエッジ',
+    title: '階層構造',
+    description: 'ツリーを決定する親子関係',
     hue: 150,
     content: (
       <section>
-        <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>hierarchical エッジ</h2>
+        <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>hierarchical な関係</h2>
         <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-          親子関係を表し、paper-in-paper のキャンバスツリーを決定します。ルートノード（level 0）から深くなるほど詳細な概念になります。
+          親子関係を表し、paper-in-paper のキャンバスツリーを決定します。ルートアイテム（level 0）から深くなるほど詳細な概念になります。
         </p>
       </section>
     ),
-    parentId: 'graph',
+    parentId: 'tree',
     childIds: [],
   },
   {
     id: 'crosslinks',
-    title: '横断リンク',
-    description: '階層を超えた概念間の関係',
+    title: '関連リンク',
+    description: '階層を超えたアイテム間の関係',
     hue: 150,
     content: (
       <section>
-        <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>非階層エッジ</h2>
+        <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>非階層リンク</h2>
         <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-          supports・contradicts・measured_by など。HTMLサマリ内の data-paper-id リンクとして埋め込まれ、クリックで対象ノードが展開されます。
+          supports・contradicts・measured_by など。HTMLサマリ内の data-paper-id リンクとして埋め込まれ、クリックで対象アイテムが展開されます。
         </p>
       </section>
     ),
-    parentId: 'graph',
+    parentId: 'tree',
     childIds: [],
   },
   {
     id: 'datalink',
     title: 'data-paper-id リンク',
-    description: 'HTMLリンクがグラフ展開をトリガー',
+    description: 'HTMLリンクがアイテム展開をトリガー',
     hue: 265,
     content: (
       <section>
@@ -289,9 +289,9 @@ export const STATIC_PAPERS: Paper[] = [
         <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
           ペーパーの HTML に{' '}
           <code style={{ fontSize: '0.8em', background: 'var(--surface-alt)', padding: '1px 4px', borderRadius: 3 }}>
-            {'<a data-paper-id="node_id">'}
+            {'<a data-paper-id="item_id">'}
           </code>
-          {' '}を埋め込むと、クリック時に対象ノードが子として展開されます。非階層リンクもこの仕組みで再現されます。
+          {' '}を埋め込むと、クリック時に対象アイテムが子として展開されます。関連リンクもこの仕組みで再現されます。
         </p>
       </section>
     ),
@@ -301,13 +301,13 @@ export const STATIC_PAPERS: Paper[] = [
   {
     id: 'focusmode',
     title: 'フォーカスモード',
-    description: '1つのノードに集中して読む',
+    description: '1つのアイテムに集中して読む',
     hue: 265,
     content: (
       <section>
         <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>フォーカスパネル</h2>
         <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-          ノードを選択するとサイドパネルが開き、ソースチャンク・関連エッジ・HTMLサマリを詳しく確認できます。閲覧履歴にも自動記録されます。
+          アイテムを選択するとサイドパネルが開き、ソースチャンク・関連リンク・HTMLサマリを詳しく確認できます。閲覧履歴にも自動記録されます。
         </p>
       </section>
     ),
@@ -321,9 +321,9 @@ export const STATIC_PAPERS: Paper[] = [
     hue: 20,
     content: (
       <section>
-        <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>user_node_views</h2>
+        <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>user_item_views</h2>
         <p style={{ margin: 0, lineHeight: 1.65, fontSize: '0.85rem' }}>
-          ノードを開くたびに first_viewed_at・last_viewed_at・view_count が記録されます。チームで誰がどの概念を探索したかが一目で分かります。
+          アイテムを開くたびに first_viewed_at・last_viewed_at・view_count が記録されます。チームで誰がどの概念を探索したかが一目で分かります。
         </p>
       </section>
     ),

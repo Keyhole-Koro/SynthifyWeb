@@ -6,7 +6,7 @@ import type { PaperCanvasHandle } from '@keyhole-koro/paper-in-paper';
 import { WorkspacePaper } from '@/features/workspaces/WorkspacePaper';
 import { buildPaperMapFromSubtree, findRootItemId } from '@/features/tree/buildTree';
 import { getTree, getSubtree, type SubtreeItem } from '@/features/tree/api';
-import { ROOT_ID } from '@/features/paperMap/buildAppPaperMap';
+import { ROOT_ID } from '@/features/paperMap/staticPapers';
 
 export function useWorkspaceTree(
   getWorkspaceName: (id: string) => string,

@@ -8,6 +8,7 @@ export function useAuthState() {
   const [user, setUser] = useState<AuthUser | null>(getInitialAuthUser);
   const [loading, setLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaceError, setWorkspaceError] = useState<Error | null>(null);
 
   useEffect(() => {
     return subscribeAuthUser((nextUser) => {
@@ -18,10 +19,12 @@ export function useAuthState() {
         return;
       }
 
+      setWorkspaceError(null);
       void listWorkspaces()
         .then(setWorkspaces)
         .catch((err) => {
           console.error('Failed to list workspaces:', err);
+          setWorkspaceError(err instanceof Error ? err : new Error(String(err)));
         })
         .finally(() => setLoading(false));
     });
@@ -49,6 +52,7 @@ export function useAuthState() {
     user,
     loading,
     workspaces,
+    workspaceError,
     setWorkspaces,
     handleGoogleSubmit,
     handleEmailSubmit,
