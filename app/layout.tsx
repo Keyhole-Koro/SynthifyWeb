@@ -3,7 +3,7 @@ import '../src/index.css';
 
 export const metadata: Metadata = {
   title: 'Synthify',
-  description: 'ドキュメントから知識グラフを生成・探索するシステム',
+  description: 'ドキュメントから知識ツリーを生成・探索するシステム',
 };
 
 export default function RootLayout({

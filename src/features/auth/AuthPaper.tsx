@@ -56,7 +56,7 @@ export function AuthPaper({
           {isLogin ? 'おかえりなさい' : 'はじめよう'}
         </h3>
         <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
-          {isLogin ? 'ドキュメントの知識グラフを探索する' : '無料でワークスペースを作成する'}
+          {isLogin ? 'ドキュメントの知識ツリーを探索する' : '無料でワークスペースを作成する'}
         </p>
       </div>
 

@@ -6,6 +6,7 @@ import type { PaperCanvasHandle } from '@keyhole-koro/paper-in-paper';
 import { WorkspacePaper } from '@/features/workspaces/WorkspacePaper';
 import { buildPaperMapFromSubtree, findRootItemId } from '@/features/tree/buildTree';
 import { getTree, getSubtree, type SubtreeItem } from '@/features/tree/api';
+import { createDocument, startProcessing, uploadFile } from '@/features/documents/api';
 import { ROOT_ID } from '@/features/paperMap/staticPapers';
 
 export function useWorkspaceTree(
@@ -21,6 +22,17 @@ export function useWorkspaceTree(
   const loadingSubtreeItemsRef = useRef<Set<string>>(new Set());
   const prevExpansionRef = useRef<ExpansionMap>(new Map());
   const initializedWorkspacesRef = useRef<Set<string>>(new Set());
+
+  const handleUploadWorkspaceFile = useCallback(async (workspaceId: string, file: File) => {
+    const created = await createDocument(
+      workspaceId,
+      file.name,
+      file.type || 'application/octet-stream',
+      file.size,
+    );
+    await uploadFile(created.uploadUrl, file);
+    await startProcessing(created.document.documentId);
+  }, []);
 
   function buildWsPaper(
     workspaceId: string,
@@ -39,7 +51,9 @@ export function useWorkspaceTree(
         <WorkspacePaper
           workspaceId={workspaceId}
           workspaceName={workspaceName}
+          hasTree={Boolean(workspaceRootItemId)}
           childItems={childPapers}
+          onUploadFile={(file) => handleUploadWorkspaceFile(workspaceId, file)}
           onSelectItem={(paperId) => {
             setExpansionMap((prev) => {
               const next = new Map(prev);
@@ -96,6 +110,9 @@ export function useWorkspaceTree(
   const handleOpenWorkspace = useCallback(async (workspaceId: string) => {
     const knownRootId = workspaceRootItemRef.current.get(workspaceId);
     if (knownRootId) {
+      if (!loadedSubtreeItemsRef.current.has(knownRootId)) {
+        void loadSubtreeForItem(workspaceId, knownRootId, knownRootId, 1);
+      }
       setExpansionMap((prev) => {
         const next = new Map(prev);
         next.set(ROOT_ID, { openChildIds: ['workspaces'] });
@@ -106,20 +123,23 @@ export function useWorkspaceTree(
       setFocusedItemId(knownRootId);
       return;
     }
-    if (!initializedWorkspacesRef.current.has(workspaceId)) {
-      initializedWorkspacesRef.current.add(workspaceId);
-      canvasRef.current?.upsertPapers([buildWsPaper(workspaceId, '', [])]);
-    }
+    // Ensure placeholder content is replaced even if a previous attempt happened before canvasRef was ready.
+    initializedWorkspacesRef.current.add(workspaceId);
+    canvasRef.current?.upsertPapers([buildWsPaper(workspaceId, '', [])]);
+
     const tree = await getTree(workspaceId);
-    if (tree.nodes.length > 0) {
-      const rootItemId = findRootItemId(tree.nodes) ?? tree.nodes[0]?.id;
+    const items = tree?.items ?? [];
+    if (items.length > 0) {
+      const rootItemId = findRootItemId(items) ?? items[0]?.id;
       if (rootItemId) {
         workspaceRootItemRef.current.set(workspaceId, rootItemId);
         await loadSubtreeForItem(workspaceId, rootItemId, rootItemId, 1);
       }
+    } else {
+      canvasRef.current?.upsertPapers([buildWsPaper(workspaceId, '', [])]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getWorkspaceName]);
+  }, [getWorkspaceName, handleUploadWorkspaceFile]);
 
   function handleExpansionMapChange(next: ExpansionMap) {
     setExpansionMap(next);

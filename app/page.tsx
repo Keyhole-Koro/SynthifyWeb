@@ -49,7 +49,7 @@ export default function LandingPage() {
     canvasRef,
   );
 
-  // workspacesノードが開いているとき全画面にする
+  // workspacesアイテムが開いているとき全画面にする
   useEffect(() => {
     const rootOpenIds = expansionMap.get(ROOT_ID)?.openChildIds ?? [];
     setIsFullscreen(rootOpenIds.includes('workspaces'));
@@ -70,18 +70,20 @@ export default function LandingPage() {
     void handleOpenWorkspace(ws.workspaceId);
   }, [handleOpenWorkspace, setWorkspaces]);
 
+  const rootPaper = useMemo<Paper>(() => ({
+    id: 'root',
+    title: 'Synthify',
+    description: 'Document Intelligence Platform',
+    hue: 220,
+    parentId: null,
+    childIds: ['auth', 'workspaces'],
+    content: '<p>Synthify へようこそ。ドキュメントを知識構造へ変換します。</p>',
+  }), []);
+
   const paperMap = useMemo(() => {
     const map = new Map<string, Paper>();
 
-    map.set('root', {
-      id: 'root',
-      title: 'Synthify',
-      description: 'Document Intelligence Platform',
-      hue: 220,
-      parentId: null,
-      childIds: ['auth', 'workspaces'],
-      content: '<p>Synthify へようこそ。ドキュメントを知識構造へ変換します。</p>',
-    });
+    map.set('root', rootPaper);
 
     map.set('auth', {
       id: 'auth',
@@ -136,7 +138,7 @@ export default function LandingPage() {
     }
 
     return map;
-  }, [user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace]);
+  }, [rootPaper, user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>

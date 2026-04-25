@@ -32,7 +32,7 @@ export function findUnplacedItemIds(items: ApiItem[]): string[] {
     .map((i) => i.id);
 }
 
-/** Subtree レスポンスから直接 PaperMap を構築する。ApiItem/Edge への変換を省く。 */
+/** Subtree レスポンスから直接 PaperMap を構築する。ApiItem/SubtreeItem の再変換を省く。 */
 export function buildPaperMapFromSubtree(items: SubtreeItem[]): PaperMap {
   const papers: Paper[] = items.map((item) => ({
     id: item.id,
