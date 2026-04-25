@@ -42,7 +42,7 @@ export default function LandingPage() {
     [workspaces],
   );
 
-  const { handleOpenWorkspace, handleExpansionMapChange, resetTree } = useWorkspaceTree(
+  const { handleOpenWorkspace, handleExpansionMapChange, resetTree, buildWsPaper } = useWorkspaceTree(
     getWorkspaceName,
     setExpansionMap,
     setFocusedItemId,
@@ -126,19 +126,11 @@ export default function LandingPage() {
     });
 
     for (const ws of workspaces) {
-      map.set(ws.workspaceId, {
-        id: ws.workspaceId,
-        title: ws.name,
-        description: 'ワークスペースの知識構造',
-        hue: 200,
-        parentId: 'workspaces',
-        childIds: [],
-        content: `<p>${ws.name} ワークスペースを読み込み中...</p>`,
-      });
+      map.set(ws.workspaceId, buildWsPaper(ws.workspaceId, '', []));
     }
 
     return map;
-  }, [rootPaper, user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace]);
+  }, [rootPaper, user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>

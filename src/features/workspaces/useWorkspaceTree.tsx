@@ -34,11 +34,11 @@ export function useWorkspaceTree(
     await startProcessing(created.document.documentId);
   }, []);
 
-  function buildWsPaper(
+  const buildWsPaper = useCallback((
     workspaceId: string,
     workspaceRootItemId: string,
     childPapers: { id: string; title: string }[],
-  ): Paper {
+  ): Paper => {
     const workspaceName = getWorkspaceName(workspaceId);
     return {
       id: workspaceId,
@@ -69,7 +69,7 @@ export function useWorkspaceTree(
         />
       ),
     };
-  }
+  }, [getWorkspaceName, handleUploadWorkspaceFile, setExpansionMap, setFocusedItemId]);
 
   function mergeTreeIntoWorkspace(workspaceId: string, workspaceRootItemId: string, items: SubtreeItem[]) {
     const treePaperMap = buildPaperMapFromSubtree(items);
@@ -178,5 +178,6 @@ export function useWorkspaceTree(
     handleOpenWorkspace,
     handleExpansionMapChange,
     resetTree,
+    buildWsPaper,
   };
 }
