@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { useJobStatus } from '@/features/jobs/useJobStatus';
+import { useWorkspaceJobStatuses } from '@/features/jobs/useWorkspaceJobStatuses';
 
 interface WorkspacePaperProps {
   workspaceId: string;
@@ -8,27 +10,36 @@ interface WorkspacePaperProps {
   hasTree: boolean;
   childItems: { id: string; title: string }[];
   onSelectItem: (itemId: string) => void;
-  onUploadFile: (file: File) => Promise<void>;
+  onUploadFile: (file: File) => Promise<{ jobId: string; documentId: string }>;
+  onProcessingComplete?: (jobId: string) => Promise<void> | void;
 }
 
 export function WorkspacePaper({
+  workspaceId,
   workspaceName,
   hasTree,
   childItems,
   onSelectItem,
   onUploadFile,
+  onProcessingComplete,
 }: WorkspacePaperProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const completedJobRef = useRef<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const { status: jobStatus, error: jobStatusError } = useJobStatus(workspaceId, activeJobId);
+  const { jobs: workspaceJobs, error: workspaceJobsError } = useWorkspaceJobStatuses(workspaceId);
   const isTreeMissing = !hasTree;
 
   async function handleUpload(file: File) {
     setUploading(true);
     setUploadMessage(null);
     try {
-      await onUploadFile(file);
+      const job = await onUploadFile(file);
+      setActiveJobId(job.jobId);
+      completedJobRef.current = null;
       setUploadMessage('アップロードしました。解析を開始します。');
     } catch (err) {
       console.error('Upload failed:', err);
@@ -37,6 +48,15 @@ export function WorkspacePaper({
       setUploading(false);
     }
   }
+
+  useEffect(() => {
+    if (!jobStatus || !activeJobId) return;
+    if (jobStatus.status !== 'succeeded') return;
+    if (completedJobRef.current === activeJobId) return;
+    completedJobRef.current = activeJobId;
+    setUploadMessage('解析が完了しました。');
+    void onProcessingComplete?.(activeJobId);
+  }, [activeJobId, jobStatus, onProcessingComplete]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -161,7 +181,67 @@ export function WorkspacePaper({
             {uploadMessage}
           </p>
         )}
+
+        {(jobStatus || jobStatusError) && (
+          <div className="mt-3 rounded-lg border border-stone-200 bg-white px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="truncate text-[11px] font-medium text-stone-600">
+                {jobStatusError ?? jobStatus?.message ?? jobStatus?.currentStage ?? '解析中'}
+              </span>
+              {typeof jobStatus?.progress === 'number' && (
+                <span className="text-[10px] font-semibold text-stone-400">{jobStatus.progress}%</span>
+              )}
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-100">
+              <div
+                className={[
+                  'h-full rounded-full transition-all',
+                  jobStatus?.status === 'failed' ? 'bg-red-400' : 'bg-indigo-500',
+                ].join(' ')}
+                style={{ width: `${Math.max(4, Math.min(100, jobStatus?.progress ?? 8))}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {(workspaceJobs.length > 0 || workspaceJobsError) && (
+          <div className="mt-4 rounded-xl border border-stone-200 bg-white/95 p-3 shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-stone-400">Recent Jobs</p>
+              {workspaceJobsError && <span className="text-[10px] text-red-400">sync error</span>}
+            </div>
+            <div className="space-y-2">
+              {workspaceJobs.map((job) => (
+                <div key={job.jobId} className="rounded-lg border border-stone-100 bg-stone-50 px-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate text-[11px] font-medium text-stone-700">
+                      {job.message || job.currentStage || job.status}
+                    </span>
+                    <span className={jobStatusTone(job.status)}>{job.status}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-3 text-[10px] text-stone-400">
+                    <span className="truncate">{job.documentId}</span>
+                    <span>{typeof job.progress === 'number' ? `${job.progress}%` : ''}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+function jobStatusTone(status: string) {
+  switch (status) {
+    case 'succeeded':
+      return 'text-[10px] font-semibold uppercase tracking-wide text-emerald-600';
+    case 'failed':
+      return 'text-[10px] font-semibold uppercase tracking-wide text-red-500';
+    case 'running':
+      return 'text-[10px] font-semibold uppercase tracking-wide text-indigo-500';
+    default:
+      return 'text-[10px] font-semibold uppercase tracking-wide text-stone-400';
+  }
 }

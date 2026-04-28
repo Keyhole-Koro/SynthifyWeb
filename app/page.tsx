@@ -10,7 +10,7 @@ import { WorkspaceListContent } from '@/features/paperMap/WorkspaceListContent';
 import { createWorkspace } from '@/features/workspaces/api';
 import { useAuthState } from '@/features/auth/useAuthState';
 import { useWorkspaceTree } from '@/features/workspaces/useWorkspaceTree';
-import { signOutSession } from '@/features/auth/session';
+import { signOutSession } from '@/features/auth/auth';
 
 const PaperCanvas = dynamic(
   () => import('@keyhole-koro/paper-in-paper').then((mod) => mod.PaperCanvas),

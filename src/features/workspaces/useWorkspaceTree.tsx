@@ -31,8 +31,11 @@ export function useWorkspaceTree(
       file.size,
     );
     await uploadFile(created.uploadUrl, file);
-    await startProcessing(created.document.documentId);
-    // Trace paper is no longer added here. It belongs to the Audit screen.
+    const processing = await startProcessing(created.document.documentId);
+    return {
+      jobId: processing.job.jobId,
+      documentId: created.document.documentId,
+    };
   }, []);
 
   const buildWsPaper = useCallback((
@@ -55,6 +58,7 @@ export function useWorkspaceTree(
           hasTree={Boolean(rootItemId)}
           childItems={childPapers}
           onUploadFile={(file) => handleUploadWorkspaceFile(workspaceId, file)}
+          onProcessingComplete={() => refreshWorkspaceTree(workspaceId)}
           onSelectItem={(paperId) => {
             setExpansionMap((prev) => {
               const next = new Map(prev);
@@ -73,7 +77,30 @@ export function useWorkspaceTree(
         />
       ),
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getWorkspaceName, handleUploadWorkspaceFile, setExpansionMap, setFocusedItemId]);
+
+  async function refreshWorkspaceTree(workspaceId: string) {
+    const tree = await getTree(workspaceId);
+    const items = tree?.items ?? [];
+    if (items.length === 0) {
+      canvasRef.current?.upsertPapers([buildWsPaper(workspaceId, [])]);
+      return;
+    }
+    const rootItemId = findRootItemId(items) ?? items[0]?.id;
+    if (!rootItemId) return;
+    workspaceRootItemRef.current.set(workspaceId, rootItemId);
+    loadedSubtreeItemsRef.current.delete(rootItemId);
+    await loadSubtreeForItem(workspaceId, rootItemId, rootItemId, 1);
+    setExpansionMap((prev) => {
+      const next = new Map(prev);
+      next.set(ROOT_ID, { openChildIds: ['workspaces'] });
+      next.set('workspaces', { openChildIds: [workspaceId] });
+      next.set(workspaceId, { openChildIds: [rootItemId] });
+      return next;
+    });
+    setFocusedItemId(rootItemId);
+  }
 
   function mergeTreeIntoWorkspace(workspaceId: string, workspaceRootItemId: string, items: SubtreeItem[]) {
     const treePaperMap = buildPaperMapFromSubtree(items);

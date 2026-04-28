@@ -14,7 +14,7 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
-  provider: 'firebase';
+  provider: 'firebase' | 'e2e';
 };
 
 function fromFirebaseUser(user: User | null): AuthUser | null {
@@ -51,8 +51,4 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   }
   const token = await auth.currentUser.getIdToken(true);
   return { Authorization: `Bearer ${token}` };
-}
-
-export function isE2EAuthEnabled(): boolean {
-  return false;
 }
