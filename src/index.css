@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-space: "Space Grotesk", "Noto Sans JP", sans-serif;
+  --font-space: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
 }
 

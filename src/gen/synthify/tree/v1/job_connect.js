@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveJobApprovalRequest, ApproveJobApprovalResponse, GetJobExecutionPlanRequest, GetJobExecutionPlanResponse, GetJobStatusRequest, GetJobStatusResponse, ListJobApprovalRequestsRequest, ListJobApprovalRequestsResponse, RejectJobApprovalRequest, RejectJobApprovalResponse, RequestJobApprovalRequest, RequestJobApprovalResponse } from "./job_pb.js";
+import { ApproveJobApprovalRequest, ApproveJobApprovalResponse, GetJobExecutionPlanRequest, GetJobExecutionPlanResponse, GetJobStatusRequest, GetJobStatusResponse, ListAllJobsRequest, ListAllJobsResponse, ListJobApprovalRequestsRequest, ListJobApprovalRequestsResponse, ListJobMutationLogsRequest, ListJobMutationLogsResponse, RejectJobApprovalRequest, RejectJobApprovalResponse, RequestJobApprovalRequest, RequestJobApprovalResponse } from "./job_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -64,6 +64,24 @@ export const JobService = {
       name: "RejectJobApproval",
       I: RejectJobApprovalRequest,
       O: RejectJobApprovalResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc synthify.tree.v1.JobService.ListJobMutationLogs
+     */
+    listJobMutationLogs: {
+      name: "ListJobMutationLogs",
+      I: ListJobMutationLogsRequest,
+      O: ListJobMutationLogsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc synthify.tree.v1.JobService.ListAllJobs
+     */
+    listAllJobs: {
+      name: "ListAllJobs",
+      I: ListAllJobsRequest,
+      O: ListAllJobsResponse,
       kind: MethodKind.Unary,
     },
   }

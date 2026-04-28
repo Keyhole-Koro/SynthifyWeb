@@ -3,14 +3,17 @@ import { env } from '@/config/env';
 import { getAuthHeaders } from '@/features/auth/session';
 import { TreeService } from '@/gen/synthify/tree/v1/tree_pb';
 import { ItemService } from '@/gen/synthify/tree/v1/item_pb';
+import { JobService } from '@/gen/synthify/tree/v1/job_pb';
 import { TreeProjectionScope } from '@/gen/synthify/tree/v1/tree_types_pb';
 
 export type { Item as ApiItem } from '@/gen/synthify/tree/v1/tree_types_pb';
 export type { EntityRef, TreeEntityDetail } from '@/gen/synthify/tree/v1/item_pb';
+export type { JobMutationLog } from '@/gen/synthify/tree/v1/job_pb';
 export { TreeProjectionScope } from '@/gen/synthify/tree/v1/tree_types_pb';
 
 const treeClient = createRPCClient(TreeService);
 const itemClient = createRPCClient(ItemService);
+const jobClient = createRPCClient(JobService);
 
 export async function getTree(
   workspaceId: string,
@@ -64,4 +67,14 @@ export async function getSubtree(
     throw new Error(err.message ?? res.statusText);
   }
   return res.json() as Promise<SubtreeItem[]>;
+}
+
+export async function listJobMutationLogs(jobId: string) {
+  const res = await jobClient.listJobMutationLogs({ jobId });
+  return res.logs;
+}
+
+export async function listAllJobs() {
+  const res = await jobClient.listAllJobs({});
+  return res.jobs;
 }

@@ -13,9 +13,6 @@ const rawEnvSchema = z.object({
   NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL: z.string().url().optional(),
   NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST: z.string().min(1).optional(),
   NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT: z.coerce.number().int().positive().optional(),
-  NEXT_PUBLIC_E2E_USER_ID: z.string().min(1).optional(),
-  NEXT_PUBLIC_E2E_USER_EMAIL: z.string().email().optional(),
-  NEXT_PUBLIC_E2E_USER_NAME: z.string().min(1).optional(),
 });
 
 const rawEnv = rawEnvSchema.parse({
@@ -30,9 +27,6 @@ const rawEnv = rawEnvSchema.parse({
   NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL: process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL,
   NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST: process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
   NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT: process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT,
-  NEXT_PUBLIC_E2E_USER_ID: process.env.NEXT_PUBLIC_E2E_USER_ID,
-  NEXT_PUBLIC_E2E_USER_EMAIL: process.env.NEXT_PUBLIC_E2E_USER_EMAIL,
-  NEXT_PUBLIC_E2E_USER_NAME: process.env.NEXT_PUBLIC_E2E_USER_NAME,
 });
 
 export const env = {
@@ -48,10 +42,5 @@ export const env = {
     authEmulatorUrl: rawEnv.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL,
     firestoreEmulatorHost: rawEnv.NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
     firestoreEmulatorPort: rawEnv.NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT,
-  },
-  e2e: {
-    userId: rawEnv.NEXT_PUBLIC_E2E_USER_ID,
-    userEmail: rawEnv.NEXT_PUBLIC_E2E_USER_EMAIL,
-    userName: rawEnv.NEXT_PUBLIC_E2E_USER_NAME,
   },
 } as const;

@@ -32,36 +32,40 @@ export function useWorkspaceTree(
     );
     await uploadFile(created.uploadUrl, file);
     await startProcessing(created.document.documentId);
+    // Trace paper is no longer added here. It belongs to the Audit screen.
   }, []);
 
   const buildWsPaper = useCallback((
     workspaceId: string,
-    workspaceRootItemId: string,
     childPapers: { id: string; title: string }[],
   ): Paper => {
     const workspaceName = getWorkspaceName(workspaceId);
+    const rootItemId = workspaceRootItemRef.current.get(workspaceId);
     return {
       id: workspaceId,
       title: workspaceName,
       description: 'ドキュメントと知識構造',
       hue: 200,
       parentId: 'workspaces',
-      childIds: workspaceRootItemId ? [workspaceRootItemId] : [],
+      childIds: rootItemId ? [rootItemId] : [],
       content: (
         <WorkspacePaper
           workspaceId={workspaceId}
           workspaceName={workspaceName}
-          hasTree={Boolean(workspaceRootItemId)}
+          hasTree={Boolean(rootItemId)}
           childItems={childPapers}
           onUploadFile={(file) => handleUploadWorkspaceFile(workspaceId, file)}
           onSelectItem={(paperId) => {
             setExpansionMap((prev) => {
               const next = new Map(prev);
               next.set('workspaces', { openChildIds: [workspaceId] });
-              next.set(workspaceId, { openChildIds: [workspaceRootItemId] });
-              next.set(workspaceRootItemId, {
-                openChildIds: Array.from(new Set([...(next.get(workspaceRootItemId)?.openChildIds ?? []), paperId])),
-              });
+              if (rootItemId) {
+                next.set(workspaceId, { openChildIds: [rootItemId] });
+                const openChildIds = Array.from(new Set([...(next.get(rootItemId)?.openChildIds ?? []), paperId]));
+                next.set(rootItemId, {
+                  openChildIds,
+                });
+              }
               return next;
             });
             setFocusedItemId(paperId);
@@ -84,7 +88,7 @@ export function useWorkspaceTree(
       .map((p) => ({ id: p.id, title: p.title }));
 
     initializedWorkspacesRef.current.add(workspaceId);
-    toMerge.push(buildWsPaper(workspaceId, workspaceRootItemId, childPapers));
+    toMerge.push(buildWsPaper(workspaceId, childPapers));
 
     canvasRef.current?.mergePapers(toMerge);
   }
@@ -123,9 +127,8 @@ export function useWorkspaceTree(
       setFocusedItemId(knownRootId);
       return;
     }
-    // Ensure placeholder content is replaced even if a previous attempt happened before canvasRef was ready.
     initializedWorkspacesRef.current.add(workspaceId);
-    canvasRef.current?.upsertPapers([buildWsPaper(workspaceId, '', [])]);
+    canvasRef.current?.upsertPapers([buildWsPaper(workspaceId, [])]);
 
     const tree = await getTree(workspaceId);
     const items = tree?.items ?? [];
@@ -136,7 +139,7 @@ export function useWorkspaceTree(
         await loadSubtreeForItem(workspaceId, rootItemId, rootItemId, 1);
       }
     } else {
-      canvasRef.current?.upsertPapers([buildWsPaper(workspaceId, '', [])]);
+      canvasRef.current?.upsertPapers([buildWsPaper(workspaceId, [])]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getWorkspaceName, handleUploadWorkspaceFile]);

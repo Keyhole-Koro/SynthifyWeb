@@ -11,6 +11,127 @@ import type { Message } from "@bufbuild/protobuf";
 export declare const file_synthify_tree_v1_job: GenFile;
 
 /**
+ * @generated from message synthify.tree.v1.ListAllJobsRequest
+ */
+export declare type ListAllJobsRequest = Message<"synthify.tree.v1.ListAllJobsRequest"> & {
+};
+
+/**
+ * Describes the message synthify.tree.v1.ListAllJobsRequest.
+ * Use `create(ListAllJobsRequestSchema)` to create a new message.
+ */
+export declare const ListAllJobsRequestSchema: GenMessage<ListAllJobsRequest>;
+
+/**
+ * @generated from message synthify.tree.v1.ListAllJobsResponse
+ */
+export declare type ListAllJobsResponse = Message<"synthify.tree.v1.ListAllJobsResponse"> & {
+  /**
+   * @generated from field: repeated synthify.tree.v1.Job jobs = 1;
+   */
+  jobs: Job[];
+};
+
+/**
+ * Describes the message synthify.tree.v1.ListAllJobsResponse.
+ * Use `create(ListAllJobsResponseSchema)` to create a new message.
+ */
+export declare const ListAllJobsResponseSchema: GenMessage<ListAllJobsResponse>;
+
+/**
+ * @generated from message synthify.tree.v1.ListJobMutationLogsRequest
+ */
+export declare type ListJobMutationLogsRequest = Message<"synthify.tree.v1.ListJobMutationLogsRequest"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message synthify.tree.v1.ListJobMutationLogsRequest.
+ * Use `create(ListJobMutationLogsRequestSchema)` to create a new message.
+ */
+export declare const ListJobMutationLogsRequestSchema: GenMessage<ListJobMutationLogsRequest>;
+
+/**
+ * @generated from message synthify.tree.v1.JobMutationLog
+ */
+export declare type JobMutationLog = Message<"synthify.tree.v1.JobMutationLog"> & {
+  /**
+   * @generated from field: string mutation_id = 1;
+   */
+  mutationId: string;
+
+  /**
+   * @generated from field: string job_id = 2;
+   */
+  jobId: string;
+
+  /**
+   * @generated from field: string target_type = 3;
+   */
+  targetType: string;
+
+  /**
+   * @generated from field: string target_id = 4;
+   */
+  targetId: string;
+
+  /**
+   * @generated from field: string mutation_type = 5;
+   */
+  mutationType: string;
+
+  /**
+   * @generated from field: string risk_tier = 6;
+   */
+  riskTier: string;
+
+  /**
+   * @generated from field: string before_json = 7;
+   */
+  beforeJson: string;
+
+  /**
+   * @generated from field: string after_json = 8;
+   */
+  afterJson: string;
+
+  /**
+   * @generated from field: string provenance_json = 9;
+   */
+  provenanceJson: string;
+
+  /**
+   * @generated from field: string created_at = 10;
+   */
+  createdAt: string;
+};
+
+/**
+ * Describes the message synthify.tree.v1.JobMutationLog.
+ * Use `create(JobMutationLogSchema)` to create a new message.
+ */
+export declare const JobMutationLogSchema: GenMessage<JobMutationLog>;
+
+/**
+ * @generated from message synthify.tree.v1.ListJobMutationLogsResponse
+ */
+export declare type ListJobMutationLogsResponse = Message<"synthify.tree.v1.ListJobMutationLogsResponse"> & {
+  /**
+   * @generated from field: repeated synthify.tree.v1.JobMutationLog logs = 1;
+   */
+  logs: JobMutationLog[];
+};
+
+/**
+ * Describes the message synthify.tree.v1.ListJobMutationLogsResponse.
+ * Use `create(ListJobMutationLogsResponseSchema)` to create a new message.
+ */
+export declare const ListJobMutationLogsResponseSchema: GenMessage<ListJobMutationLogsResponse>;
+
+/**
  * @generated from message synthify.tree.v1.Job
  */
 export declare type Job = Message<"synthify.tree.v1.Job"> & {
@@ -561,6 +682,22 @@ export declare const JobService: GenService<{
     methodKind: "unary";
     input: typeof RejectJobApprovalRequestSchema;
     output: typeof RejectJobApprovalResponseSchema;
+  },
+  /**
+   * @generated from rpc synthify.tree.v1.JobService.ListJobMutationLogs
+   */
+  listJobMutationLogs: {
+    methodKind: "unary";
+    input: typeof ListJobMutationLogsRequestSchema;
+    output: typeof ListJobMutationLogsResponseSchema;
+  },
+  /**
+   * @generated from rpc synthify.tree.v1.JobService.ListAllJobs
+   */
+  listAllJobs: {
+    methodKind: "unary";
+    input: typeof ListAllJobsRequestSchema;
+    output: typeof ListAllJobsResponseSchema;
   },
 }>;
 

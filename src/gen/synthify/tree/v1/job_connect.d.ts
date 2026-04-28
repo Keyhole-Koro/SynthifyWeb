@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveJobApprovalRequest, ApproveJobApprovalResponse, GetJobExecutionPlanRequest, GetJobExecutionPlanResponse, GetJobStatusRequest, GetJobStatusResponse, ListJobApprovalRequestsRequest, ListJobApprovalRequestsResponse, RejectJobApprovalRequest, RejectJobApprovalResponse, RequestJobApprovalRequest, RequestJobApprovalResponse } from "./job_pb.js";
+import { ApproveJobApprovalRequest, ApproveJobApprovalResponse, GetJobExecutionPlanRequest, GetJobExecutionPlanResponse, GetJobStatusRequest, GetJobStatusResponse, ListAllJobsRequest, ListAllJobsResponse, ListJobApprovalRequestsRequest, ListJobApprovalRequestsResponse, ListJobMutationLogsRequest, ListJobMutationLogsResponse, RejectJobApprovalRequest, RejectJobApprovalResponse, RequestJobApprovalRequest, RequestJobApprovalResponse } from "./job_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -64,6 +64,24 @@ export declare const JobService: {
       readonly name: "RejectJobApproval",
       readonly I: typeof RejectJobApprovalRequest,
       readonly O: typeof RejectJobApprovalResponse,
+      readonly kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc synthify.tree.v1.JobService.ListJobMutationLogs
+     */
+    readonly listJobMutationLogs: {
+      readonly name: "ListJobMutationLogs",
+      readonly I: typeof ListJobMutationLogsRequest,
+      readonly O: typeof ListJobMutationLogsResponse,
+      readonly kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc synthify.tree.v1.JobService.ListAllJobs
+     */
+    readonly listAllJobs: {
+      readonly name: "ListAllJobs",
+      readonly I: typeof ListAllJobsRequest,
+      readonly O: typeof ListAllJobsResponse,
       readonly kind: MethodKind.Unary,
     },
   }
