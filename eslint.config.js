@@ -6,7 +6,14 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [".next", "out", "playwright-report", "test-results"]
+    ignores: [
+      ".next",
+      "out",
+      "playwright-report",
+      "test-results",
+      "src/gen/**",
+      "vender/**"
+    ]
   },
   {
     files: ["**/*.{ts,tsx}"],
@@ -26,7 +33,7 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": [
         "warn",
-        { allowConstantExport: true, allowExportNames: ["metadata"] }
+        { allowConstantExport: true, allowExportNames: ["metadata", "ROOT_ID", "STATIC_PAPERS"] }
       ]
     }
   }

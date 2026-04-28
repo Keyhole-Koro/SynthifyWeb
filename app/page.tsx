@@ -21,7 +21,7 @@ export default function LandingPage() {
   const { user, loading, workspaces, workspaceError, setWorkspaces, handleGoogleSubmit, handleEmailSubmit } = useAuthState();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canvasFullscreen, setCanvasFullscreen] = useState(false);
   const [winSize, setWinSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const update = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
@@ -49,11 +49,11 @@ export default function LandingPage() {
     canvasRef,
   );
 
-  // workspacesアイテムが開いているとき全画面にする
-  useEffect(() => {
+  const isWorkspaceExpanded = useMemo(() => {
     const rootOpenIds = expansionMap.get(ROOT_ID)?.openChildIds ?? [];
-    setIsFullscreen(rootOpenIds.includes('workspaces'));
+    return rootOpenIds.includes('workspaces');
   }, [expansionMap]);
+  const isFullscreen = isWorkspaceExpanded || canvasFullscreen;
 
   const handleLogout = useCallback(async () => {
     await signOutSession();
@@ -126,11 +126,11 @@ export default function LandingPage() {
     });
 
     for (const ws of workspaces) {
-      map.set(ws.workspaceId, buildWsPaper(ws.workspaceId, '', []));
+      map.set(ws.workspaceId, buildWsPaper(ws.workspaceId, []));
     }
 
     return map;
-  }, [rootPaper, user, workspaces, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper]);
+  }, [rootPaper, user, workspaces, workspaceError, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>
@@ -197,7 +197,7 @@ export default function LandingPage() {
           debug={false}
           onExpansionMapChange={handleExpansionMapChange}
           onFocusedNodeIdChange={setFocusedItemId}
-          onFullscreenChange={setIsFullscreen}
+          onFullscreenChange={setCanvasFullscreen}
         />
       </div>
 

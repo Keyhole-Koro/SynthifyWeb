@@ -6,8 +6,12 @@ interface AgentTraceViewerProps {
 }
 
 interface FlowNode {
-  log: JobMutationLog;
+  log: Pick<JobMutationLog, 'mutationId' | 'targetId' | 'targetType' | 'mutationType' | 'createdAt' | 'provenanceJson' | 'beforeJson' | 'afterJson'>;
   children: FlowNode[];
+}
+
+function errorMessage(err: unknown) {
+  return err instanceof Error ? err.message : 'Failed to fetch logs';
 }
 
 export const AgentTraceViewer: React.FC<AgentTraceViewerProps> = ({ jobId }) => {
@@ -23,8 +27,8 @@ export const AgentTraceViewer: React.FC<AgentTraceViewerProps> = ({ jobId }) => 
         const data = await listJobMutationLogs(jobId);
         setLogs(data);
         setError(null);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch logs');
+      } catch (err: unknown) {
+        setError(errorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -44,13 +48,16 @@ export const AgentTraceViewer: React.FC<AgentTraceViewerProps> = ({ jobId }) => 
     // 仮想的なルート（Orchestrator）の下に全 ToolCall をぶら下げる。
     // 将来的に ADK が Caller 情報を持つようになれば、ここで正確な親子関係を構築可能。
     const root: FlowNode = {
-      log: { 
+      log: {
         mutationId: 'root', 
+        beforeJson: '',
+        afterJson: '',
+        provenanceJson: '',
         targetId: 'Orchestrator', 
         targetType: 'agent', 
         mutationType: 'start', 
         createdAt: logs[0].createdAt 
-      } as any,
+      },
       children: logs.map(l => ({ log: l, children: [] }))
     };
     return root;

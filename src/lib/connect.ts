@@ -1,4 +1,5 @@
-import { createClient } from '@connectrpc/connect';
+import { createClient, type Client } from '@connectrpc/connect';
+import type { DescService } from '@bufbuild/protobuf';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { env } from '@/config/env';
 import { getAuthHeaders } from '@/features/auth/session';
@@ -16,6 +17,6 @@ const transport = createConnectTransport({
   ],
 });
 
-export function createRPCClient(service: any) {
-  return createClient(service, transport) as any;
+export function createRPCClient<T extends DescService>(service: T): Client<T> {
+  return createClient(service, transport);
 }
