@@ -54,6 +54,9 @@ export default function LandingPage() {
     return rootOpenIds.includes('workspaces');
   }, [expansionMap]);
   const isFullscreen = isWorkspaceExpanded || canvasFullscreen;
+  const rootContentImportance = isWorkspaceExpanded ? 18 : 100;
+  const authImportance = isWorkspaceExpanded ? 15 : 100;
+  const workspacesImportance = isWorkspaceExpanded ? 180 : 100;
 
   const handleLogout = useCallback(async () => {
     await signOutSession();
@@ -75,10 +78,11 @@ export default function LandingPage() {
     title: 'Synthify',
     description: 'Document Intelligence Platform',
     hue: 220,
+    contentImportance: rootContentImportance,
     parentId: null,
     childIds: ['auth', 'workspaces'],
     content: '<p>Synthify へようこそ。ドキュメントを知識構造へ変換します。</p>',
-  }), []);
+  }), [rootContentImportance]);
 
   const paperMap = useMemo(() => {
     const map = new Map<string, Paper>();
@@ -90,6 +94,7 @@ export default function LandingPage() {
       title: user ? 'アカウント' : 'ログイン',
       description: '認証とプロファイル',
       hue: 280,
+      importance: authImportance,
       parentId: 'root',
       childIds: [],
       content: (
@@ -111,6 +116,7 @@ export default function LandingPage() {
       title: 'ワークスペース',
       description: 'あなたのプロジェクト一覧',
       hue: 200,
+      importance: workspacesImportance,
       parentId: 'root',
       childIds: workspaces.map((w) => w.workspaceId),
       content: (
@@ -130,7 +136,7 @@ export default function LandingPage() {
     }
 
     return map;
-  }, [rootPaper, user, workspaces, workspaceError, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper]);
+  }, [rootPaper, user, workspaces, workspaceError, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper, authImportance, workspacesImportance]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>
@@ -194,7 +200,7 @@ export default function LandingPage() {
           expansionMap={expansionMap}
           focusedNodeId={focusedItemId}
           isFullscreen={isFullscreen}
-          debug={false}
+          debug={true}
           onExpansionMapChange={handleExpansionMapChange}
           onFocusedNodeIdChange={setFocusedItemId}
           onFullscreenChange={setCanvasFullscreen}
