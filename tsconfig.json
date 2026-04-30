@@ -20,7 +20,9 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@keyhole-koro/paper-in-paper": ["./vender/paper-in-paper/src/lib/index.ts"],
+      "@keyhole-koro/paper-in-paper/*": ["./vender/paper-in-paper/src/lib/*"]
     },
     "plugins": [
       {
