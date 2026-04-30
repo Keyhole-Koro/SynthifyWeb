@@ -16,6 +16,7 @@ export function buildPaperMapFromTree(items: ApiItem[]): PaperMap {
     hue: DEFAULT_HUE,
     parentId: item.parentId || null,
     childIds: item.childIds || [],
+    overrideCss: item.overrideCss || undefined,
   }));
 
   return buildPaperMap(papers);
@@ -42,6 +43,7 @@ export function buildPaperMapFromSubtree(items: SubtreeItem[]): PaperMap {
     hue: DEFAULT_HUE,
     parentId: item.parent_id || null,
     childIds: item.child_ids || [],
+    overrideCss: item.override_css || undefined,
   }));
 
   return buildPaperMap(papers);

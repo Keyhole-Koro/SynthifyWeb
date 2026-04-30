@@ -63,6 +63,11 @@ export declare type Item = Message<"synthify.tree.v1.Item"> & {
    * @generated from field: synthify.tree.v1.ItemGovernanceState governance_state = 10;
    */
   governanceState: ItemGovernanceState;
+
+  /**
+   * @generated from field: string override_css = 11;
+   */
+  overrideCss: string;
 };
 
 /**

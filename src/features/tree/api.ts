@@ -44,6 +44,7 @@ export interface SubtreeItem {
   level: number;
   description: string;
   summary_html?: string;
+  override_css?: string;
   has_children: boolean;
   parent_id?: string;
   child_ids?: string[];
