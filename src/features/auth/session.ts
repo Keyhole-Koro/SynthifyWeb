@@ -14,7 +14,6 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
-  provider: 'firebase' | 'e2e';
 };
 
 function fromFirebaseUser(user: User | null): AuthUser | null {
@@ -23,7 +22,6 @@ function fromFirebaseUser(user: User | null): AuthUser | null {
     id: user.uid,
     email: user.email ?? '',
     name: user.displayName ?? user.email ?? 'Anonymous User',
-    provider: 'firebase',
   };
 }
 

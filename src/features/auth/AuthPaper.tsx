@@ -1,4 +1,4 @@
-import type { AuthUser } from '@/features/auth/auth';
+import type { AuthUser } from '@/features/auth/session';
 
 type AuthMode = 'login' | 'register';
 

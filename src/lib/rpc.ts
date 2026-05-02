@@ -1,5 +1,5 @@
 import { env } from '@/config/env';
-import { getAuthHeaders } from '@/features/auth/auth';
+import { getAuthHeaders } from '@/features/auth/session';
 
 export class ApiError extends Error {
   constructor(

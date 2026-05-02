@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { listWorkspaces, type Workspace } from '@/features/workspaces/api';
-import { getInitialAuthUser, signInWithGoogleSession, subscribeAuthUser, type AuthUser } from '@/features/auth/auth';
+import { getInitialAuthUser, signInWithGoogleSession, subscribeAuthUser, type AuthUser } from '@/features/auth/session';
 
 export function useAuthState() {
   const [user, setUser] = useState<AuthUser | null>(getInitialAuthUser);

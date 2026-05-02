@@ -1,6 +1,6 @@
 import { createRPCClient } from '@/lib/connect';
 import { env } from '@/config/env';
-import { getAuthHeaders } from '@/features/auth/auth';
+import { getAuthHeaders } from '@/features/auth/session';
 import { TreeService } from '@/gen/synthify/tree/v1/tree_pb';
 import { ItemService } from '@/gen/synthify/tree/v1/item_pb';
 import { JobService } from '@/gen/synthify/tree/v1/job_pb';

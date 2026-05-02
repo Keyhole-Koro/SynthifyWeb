@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { listAllJobs } from '@/features/tree/api';
 import { AgentTraceViewer } from '@/features/tree/AgentTraceViewer';
 import type { Job } from '@/gen/synthify/tree/v1/job_pb';
-import { getInitialAuthUser, subscribeAuthUser, type AuthUser } from '@/features/auth/auth';
+import { getInitialAuthUser, subscribeAuthUser, type AuthUser } from '@/features/auth/session';
 
 export default function AuditPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
