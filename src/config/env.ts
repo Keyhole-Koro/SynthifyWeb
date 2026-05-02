@@ -3,6 +3,7 @@ import { z } from 'zod';
 const rawEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   NEXT_PUBLIC_API_BASE_URL: z.string().url(),
+  INTERNAL_API_BASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1),
   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: z.string().min(1),
   NEXT_PUBLIC_FIREBASE_PROJECT_ID: z.string().min(1),
@@ -18,6 +19,7 @@ const rawEnvSchema = z.object({
 const rawEnv = rawEnvSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  INTERNAL_API_BASE_URL: process.env.INTERNAL_API_BASE_URL,
   NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -31,7 +33,10 @@ const rawEnv = rawEnvSchema.parse({
 
 export const env = {
   nodeEnv: rawEnv.NODE_ENV,
-  apiBaseUrl: rawEnv.NEXT_PUBLIC_API_BASE_URL,
+  apiBaseUrl:
+    typeof window === 'undefined'
+      ? (rawEnv.INTERNAL_API_BASE_URL ?? rawEnv.NEXT_PUBLIC_API_BASE_URL)
+      : rawEnv.NEXT_PUBLIC_API_BASE_URL,
   firebase: {
     apiKey: rawEnv.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: rawEnv.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,

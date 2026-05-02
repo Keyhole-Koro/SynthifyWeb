@@ -21,7 +21,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@synthify/proto-ts/*": ["../../packages/proto-ts/*"],
       "@keyhole-koro/paper-in-paper": ["./vender/paper-in-paper/src/lib/index.ts"],
       "@keyhole-koro/paper-in-paper/*": ["./vender/paper-in-paper/src/lib/*"]
     },

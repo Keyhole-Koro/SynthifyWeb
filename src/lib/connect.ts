@@ -4,8 +4,10 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import { env } from '@/config/env';
 import { getAuthHeaders } from '@/features/auth/session';
 
+const baseUrl = env.apiBaseUrl;
+
 const transport = createConnectTransport({
-  baseUrl: env.apiBaseUrl,
+  baseUrl,
   interceptors: [
     (next) => async (req) => {
       const authHeaders = await getAuthHeaders();
