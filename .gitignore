@@ -6,3 +6,5 @@ playwright-report
 test-results
 .cache
 *.tsbuildinfo
+.env.local
+.env.*.local
