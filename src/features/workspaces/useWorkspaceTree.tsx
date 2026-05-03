@@ -30,7 +30,7 @@ export function useWorkspaceTree(
       file.type || 'application/octet-stream',
       file.size,
     );
-    await uploadFile(created.uploadUrl, file);
+    await uploadFile(created.uploadUrl, file, created.uploadMethod);
     const processing = await startProcessing(created.document.documentId);
     return {
       jobId: processing.job.jobId,

@@ -54,10 +54,14 @@ export async function startProcessing(
   return { documentId: res.documentId, job: res.job! };
 }
 
-/** Uploads a file to a GCS signed URL with PUT. */
-export async function uploadFile(uploadUrl: string, file: File): Promise<void> {
+/** Uploads a file to a GCS signed URL with PUT or POST. */
+export async function uploadFile(
+  uploadUrl: string,
+  file: File,
+  method = 'PUT',
+): Promise<void> {
   const res = await fetch(uploadUrl, {
-    method: 'PUT',
+    method,
     headers: { 'Content-Type': file.type },
     body: file,
   });
