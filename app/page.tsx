@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { AuthMode } from '@/features/auth/AuthPaper';
-import type { ExpansionMap, PaperCanvasHandle, Paper } from '@keyhole-koro/paper-in-paper';
+import type { ExpansionMap, Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
 import { ROOT_ID } from '@/features/paperMap/staticPapers';
 import { AuthPaper } from '@/features/auth/AuthPaper';
 import { WorkspaceListContent } from '@/features/paperMap/WorkspaceListContent';
@@ -36,17 +36,32 @@ export default function LandingPage() {
     return m;
   });
   const [focusedItemId, setFocusedItemId] = useState<string | null>('auth');
-  const canvasRef = useRef<PaperCanvasHandle>(null);
+  const [workspacePaperGroups, setWorkspacePaperGroups] = useState<Map<string, Paper[]>>(new Map());
   const getWorkspaceName = useCallback(
     (id: string) => workspaces.find((w) => w.workspaceId === id)?.name ?? id,
     [workspaces],
   );
 
+  const setWorkspacePapers = useCallback((workspaceId: string, papers: Paper[]) => {
+    setWorkspacePaperGroups((prev) => {
+      const current = prev.get(workspaceId);
+      if (current === papers) return prev;
+      const next = new Map(prev);
+      next.set(workspaceId, papers);
+      return next;
+    });
+  }, []);
+
+  const clearWorkspacePapers = useCallback(() => {
+    setWorkspacePaperGroups(new Map());
+  }, []);
+
   const { handleOpenWorkspace, handleExpansionMapChange, resetTree, buildWsPaper } = useWorkspaceTree(
     getWorkspaceName,
     setExpansionMap,
     setFocusedItemId,
-    canvasRef,
+    setWorkspacePapers,
+    clearWorkspacePapers,
   );
 
   const isWorkspaceExpanded = useMemo(() => {
@@ -84,7 +99,7 @@ export default function LandingPage() {
     content: '<p>Synthify へようこそ。ドキュメントを知識構造へ変換します。</p>',
   }), [rootContentImportance]);
 
-  const paperMap = useMemo(() => {
+  const paperMap = useMemo<PaperMap>(() => {
     const map = new Map<string, Paper>();
 
     map.set('root', rootPaper);
@@ -132,11 +147,18 @@ export default function LandingPage() {
     });
 
     for (const ws of workspaces) {
-      map.set(ws.workspaceId, buildWsPaper(ws.workspaceId, []));
+      const workspacePapers = workspacePaperGroups.get(ws.workspaceId);
+      if (workspacePapers && workspacePapers.length > 0) {
+        for (const paper of workspacePapers) {
+          map.set(paper.id, paper);
+        }
+      } else {
+        map.set(ws.workspaceId, buildWsPaper(ws.workspaceId, []));
+      }
     }
 
     return map;
-  }, [rootPaper, user, workspaces, workspaceError, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper, authImportance, workspacesImportance]);
+  }, [rootPaper, user, workspaces, workspaceError, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper, authImportance, workspacesImportance, workspacePaperGroups]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>
@@ -194,7 +216,6 @@ export default function LandingPage() {
         })()}
       >
         <PaperCanvas
-          ref={canvasRef}
           paperMap={paperMap}
           rootId={ROOT_ID}
           expansionMap={expansionMap}
