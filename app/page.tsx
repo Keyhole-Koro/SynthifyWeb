@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { AuthMode } from '@/features/auth/AuthPaper';
 import type { ExpansionMap, Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
@@ -11,6 +11,7 @@ import { createWorkspace } from '@/features/workspaces/api';
 import { useAuthState } from '@/features/auth/useAuthState';
 import { useWorkspaceTree } from '@/features/workspaces/useWorkspaceTree';
 import { signOutSession } from '@/features/auth/session';
+import { loadExpansionMap, saveExpansionMap, clearExpansionMap, loadFocusedItemId, saveFocusedItemId } from '@/features/paperMap/expansionPersistence';
 
 const PaperCanvas = dynamic(
   () => import('@keyhole-koro/paper-in-paper').then((mod) => mod.PaperCanvas),
@@ -20,10 +21,13 @@ const PaperCanvas = dynamic(
 export default function LandingPage() {
   const { user, loading, workspaces, workspaceError, setWorkspaces, handleGoogleSubmit, handleEmailSubmit } = useAuthState();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const [hasMounted, setHasMounted] = useState(false);
 
   const [canvasFullscreen, setCanvasFullscreen] = useState(false);
   const [winSize, setWinSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHasMounted(true);
     const update = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
     update();
     window.addEventListener('resize', update);
@@ -31,11 +35,34 @@ export default function LandingPage() {
   }, []);
 
   const [expansionMap, setExpansionMap] = useState<ExpansionMap>(() => {
+    if (typeof window !== 'undefined') {
+      const loaded = loadExpansionMap();
+      if (loaded) return loaded;
+    }
     const m = new Map();
     m.set(ROOT_ID, { openChildIds: ['auth'] });
     return m;
   });
-  const [focusedItemId, setFocusedItemId] = useState<string | null>('auth');
+
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const loaded = loadFocusedItemId();
+      if (loaded) return loaded;
+    }
+    return 'auth';
+  });
+
+  useEffect(() => {
+    if (hasMounted) {
+      saveExpansionMap(expansionMap);
+    }
+  }, [expansionMap, hasMounted]);
+
+  useEffect(() => {
+    if (hasMounted) {
+      saveFocusedItemId(focusedItemId);
+    }
+  }, [focusedItemId, hasMounted]);
   const [workspacePaperGroups, setWorkspacePaperGroups] = useState<Map<string, Paper[]>>(new Map());
   const getWorkspaceName = useCallback(
     (id: string) => workspaces.find((w) => w.workspaceId === id)?.name ?? id,
@@ -58,10 +85,12 @@ export default function LandingPage() {
 
   const { handleOpenWorkspace, handleExpansionMapChange, resetTree, buildWsPaper } = useWorkspaceTree(
     getWorkspaceName,
+    expansionMap,
     setExpansionMap,
     setFocusedItemId,
     setWorkspacePapers,
     clearWorkspacePapers,
+    workspaces,
   );
 
   const isWorkspaceExpanded = useMemo(() => {
@@ -76,6 +105,7 @@ export default function LandingPage() {
   const handleLogout = useCallback(async () => {
     await signOutSession();
     resetTree();
+    clearExpansionMap();
     const m = new Map();
     m.set(ROOT_ID, { openChildIds: ['auth'] });
     setExpansionMap(m);
@@ -159,6 +189,18 @@ export default function LandingPage() {
 
     return map;
   }, [rootPaper, user, workspaces, workspaceError, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper, authImportance, workspacesImportance, workspacePaperGroups]);
+
+  // Loading state during mount/initial hydration
+  // MUST be after all hooks to follow "Rules of Hooks"
+  if (!hasMounted) {
+    return (
+      <div className="h-screen w-screen bg-[#f0e6d3] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500/30 border-t-indigo-500" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>
