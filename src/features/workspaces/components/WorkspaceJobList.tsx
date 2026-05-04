@@ -1,8 +1,8 @@
 import React from 'react';
-import type { JobSummary } from '@/features/jobs/useWorkspaceJobStatuses';
+import type { JobStatus } from '@/features/jobs/useJobStatus';
 
 interface WorkspaceJobListProps {
-  workspaceJobs: JobSummary[];
+  workspaceJobs: JobStatus[];
   workspaceJobsError: string | null;
 }
 
@@ -25,7 +25,7 @@ export function WorkspaceJobList({
           <div key={job.jobId} className="rounded-lg border border-stone-100 bg-stone-50 px-3 py-2">
             <div className="flex items-center justify-between gap-3">
               <span className="truncate text-[11px] font-medium text-stone-700">
-                {job.message || job.currentStage || job.status}
+                {job.message || null}
               </span>
               <span className={jobStatusTone(job.status)}>{job.status}</span>
             </div>

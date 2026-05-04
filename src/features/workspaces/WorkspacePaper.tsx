@@ -139,7 +139,7 @@ export function WorkspacePaper({
               uploading={uploading}
               activeJobId={activeJobId}
               isDragging={isDragging}
-              jobStatusMessage={jobStatusError ?? jobStatus?.message ?? jobStatus?.currentStage}
+              jobStatusMessage={jobStatusError ?? jobStatus?.message}
               jobStatusProgress={jobStatus?.progress}
               jobStatusFailed={jobStatus?.status === 'failed'}
               onDragOver={handleDragOver}
@@ -160,7 +160,7 @@ export function WorkspacePaper({
             {/* Progress: populated mode only (empty mode shows it inline inside the drop zone) */}
             {isPopulated && (jobStatus || jobStatusError) && (
               <WorkspaceJobProgress
-                message={jobStatusError ?? jobStatus?.message ?? jobStatus?.currentStage}
+                message={jobStatusError ?? jobStatus?.message}
                 progress={jobStatus?.progress}
                 isFailed={jobStatus?.status === 'failed'}
               />
