@@ -3,15 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { AuthMode } from '@/features/auth/AuthPaper';
-import type { ExpansionMap, Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
+import type { ExpansionMap, Paper } from '@keyhole-koro/paper-in-paper';
 import { ROOT_ID } from '@/features/paperMap/staticPapers';
-import { AuthPaper } from '@/features/auth/AuthPaper';
-import { WorkspaceListContent } from '@/features/paperMap/WorkspaceListContent';
-import { createWorkspace } from '@/features/workspaces/api';
-import { useAuthState } from '@/features/auth/useAuthState';
-import { useWorkspaceTree } from '@/features/workspaces/useWorkspaceTree';
-import { signOutSession } from '@/features/auth/session';
-import { loadExpansionMap, saveExpansionMap, clearExpansionMap, loadFocusedItemId, saveFocusedItemId } from '@/features/paperMap/expansionPersistence';
+import { useLandingPaperMap } from '@/features/paperMap/hooks/useLandingPaperMap';
 
 const PaperCanvas = dynamic(
   () => import('@keyhole-koro/paper-in-paper').then((mod) => mod.PaperCanvas),
@@ -63,6 +57,7 @@ export default function LandingPage() {
       saveFocusedItemId(focusedItemId);
     }
   }, [focusedItemId, hasMounted]);
+
   const [workspacePaperGroups, setWorkspacePaperGroups] = useState<Map<string, Paper[]>>(new Map());
   const getWorkspaceName = useCallback(
     (id: string) => workspaces.find((w) => w.workspaceId === id)?.name ?? id,
@@ -118,77 +113,24 @@ export default function LandingPage() {
     void handleOpenWorkspace(ws.workspaceId);
   }, [handleOpenWorkspace, setWorkspaces]);
 
-  const rootPaper = useMemo<Paper>(() => ({
-    id: 'root',
-    title: 'Synthify',
-    description: 'Document Intelligence Platform',
-    hue: 220,
-    contentImportance: rootContentImportance,
-    parentId: null,
-    childIds: ['auth', 'workspaces'],
-    content: '<p>Synthify へようこそ。ドキュメントを知識構造へ変換します。</p>',
-  }), [rootContentImportance]);
-
-  const paperMap = useMemo<PaperMap>(() => {
-    const map = new Map<string, Paper>();
-
-    map.set('root', rootPaper);
-
-    map.set('auth', {
-      id: 'auth',
-      title: user ? 'アカウント' : 'ログイン',
-      description: '認証とプロファイル',
-      hue: 280,
-      importance: authImportance,
-      parentId: 'root',
-      childIds: [],
-      content: (
-        <AuthPaper
-          user={user}
-          mode={authMode}
-          loading={loading}
-          onModeChange={setAuthMode}
-          onEmailSubmit={handleEmailSubmit}
-          onGoogleSubmit={handleGoogleSubmit}
-          onLogout={handleLogout}
-          onCreateWorkspace={handleCreateWorkspace}
-        />
-      ),
-    });
-
-    map.set('workspaces', {
-      id: 'workspaces',
-      title: 'ワークスペース',
-      description: 'あなたのプロジェクト一覧',
-      hue: 200,
-      importance: workspacesImportance,
-      parentId: 'root',
-      childIds: workspaces.map((w) => w.workspaceId),
-      content: (
-        <WorkspaceListContent
-          workspaces={workspaces}
-          loading={loading}
-          error={workspaceError}
-          onOpenWorkspace={handleOpenWorkspace}
-          onCreateWorkspace={handleCreateWorkspace}
-          onLogout={handleLogout}
-        />
-      ),
-    });
-
-    for (const ws of workspaces) {
-      const workspacePapers = workspacePaperGroups.get(ws.workspaceId);
-      if (workspacePapers && workspacePapers.length > 0) {
-        for (const paper of workspacePapers) {
-          map.set(paper.id, paper);
-        }
-      } else {
-        map.set(ws.workspaceId, buildWsPaper(ws.workspaceId, []));
-      }
-    }
-
-    return map;
-  }, [rootPaper, user, workspaces, workspaceError, authMode, loading, handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace, handleOpenWorkspace, buildWsPaper, authImportance, workspacesImportance, workspacePaperGroups]);
+  const { paperMap } = useLandingPaperMap({
+    user,
+    loading,
+    workspaces,
+    workspaceError,
+    authMode,
+    authImportance,
+    workspacesImportance,
+    rootContentImportance,
+    workspacePaperGroups,
+    setAuthMode,
+    handleEmailSubmit,
+    handleGoogleSubmit,
+    handleLogout,
+    handleCreateWorkspace,
+    handleOpenWorkspace,
+    buildWsPaper,
+  });
 
   // Loading state during mount/initial hydration
   // MUST be after all hooks to follow "Rules of Hooks"
@@ -203,6 +145,7 @@ export default function LandingPage() {
   }
 
   return (
+
     <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse at top left, #fff8ee 0%, #f0e6d3 50%, #e8dbc8 100%)' }}>
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-24 -top-24 h-[480px] w-[480px] rounded-full bg-amber-200/40 blur-[80px]" />
