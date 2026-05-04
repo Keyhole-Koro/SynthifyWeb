@@ -6,6 +6,11 @@ import type { AuthMode } from '@/features/auth/AuthPaper';
 import type { ExpansionMap, Paper } from '@keyhole-koro/paper-in-paper';
 import { ROOT_ID } from '@/features/paperMap/staticPapers';
 import { useLandingPaperMap } from '@/features/paperMap/hooks/useLandingPaperMap';
+import { useAuthState } from '@/features/auth/useAuthState';
+import { signOutSession } from '@/features/auth/session';
+import { saveExpansionMap, loadExpansionMap, saveFocusedItemId, loadFocusedItemId, clearExpansionMap } from '@/features/paperMap/expansionPersistence';
+import { useWorkspaceTree } from '@/features/workspaces/useWorkspaceTree';
+import { createWorkspace } from '@/features/workspaces/api';
 
 const PaperCanvas = dynamic(
   () => import('@keyhole-koro/paper-in-paper').then((mod) => mod.PaperCanvas),

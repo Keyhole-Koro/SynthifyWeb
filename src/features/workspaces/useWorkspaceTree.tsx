@@ -30,9 +30,25 @@ export function useWorkspaceTree(
   const prevExpansionRef = useRef<ExpansionMap>(expansionMap);
   const initializedWorkspacesRef = useRef<Set<string>>(new Set());
 
-  // Re-hydrate expanded workspaces and subtrees on mount or when workspaces are loaded
+  // Re-hydrate expanded workspaces and subtrees on mount or when workspaces are loaded.
+  // Also re-renders already-initialized workspaces so their title reflects the loaded name.
   useEffect(() => {
     if (workspaces.length === 0) return;
+
+    for (const { workspaceId } of workspaces) {
+      if (initializedWorkspacesRef.current.has(workspaceId)) {
+        const rootItemId = workspaceRootItemRef.current.get(workspaceId);
+        const childPapers = rootItemId
+          ? (workspaceDocumentRootIdsRef.current.get(workspaceId) ?? [])
+              .map((id) => {
+                const it = workspaceTreeItemsRef.current.get(workspaceId)?.get(id)?.item;
+                return it ? { id: it.id, title: it.label } : null;
+              })
+              .filter((p): p is { id: string; title: string } => p != null)
+          : [];
+        setWorkspacePapers(workspaceId, [buildWsPaper(workspaceId, childPapers)]);
+      }
+    }
 
     const rootOpenIds = expansionMap.get(ROOT_ID)?.openChildIds ?? [];
     if (!rootOpenIds.includes('workspaces')) return;
