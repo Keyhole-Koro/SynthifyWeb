@@ -1,6 +1,6 @@
 import { buildPaperMap } from '@keyhole-koro/paper-in-paper';
 import type { Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
-import type { ApiItem, SubtreeItem } from './api';
+import type { ApiItem } from './api';
 
 const DEFAULT_HUE = 220;
 
@@ -33,21 +33,6 @@ export function findUnplacedItemIds(items: ApiItem[]): string[] {
     .map((i) => i.id);
 }
 
-/** Subtree レスポンスから直接 PaperMap を構築する。ApiItem/SubtreeItem の再変換を省く。 */
-export function buildPaperMapFromSubtree(items: SubtreeItem[]): PaperMap {
-  const papers: Paper[] = items.map((item) => ({
-    id: item.id,
-    title: item.label,
-    description: item.description,
-    content: item.summary_html ? item.summary_html : `<p>${item.description}</p>`,
-    hue: DEFAULT_HUE,
-    parentId: item.parent_id || null,
-    childIds: item.child_ids || [],
-    overrideCss: item.override_css || undefined,
-  }));
-
-  return buildPaperMap(papers);
-}
 
 /** Returns the root item ID (level 0 or a item without a parent). */
 export function findRootItemId(items: ApiItem[]): string | undefined {

@@ -6,6 +6,8 @@ import { WorkspacePaper } from '@/features/workspaces/WorkspacePaper';
 import { findRootItemId } from '@/features/tree/buildTree';
 import { projectWorkspacePapers } from '@/features/workspaces/useWorkspaceProjection';
 import { getTree, getSubtree, type ApiItem, type SubtreeItem } from '@/features/tree/api';
+import { create } from '@bufbuild/protobuf';
+import { SubtreeItemSchema } from '@synthify/proto-ts/gen/synthify/tree/v1/tree_types_pb';
 import { createDocument, startProcessing, uploadFile } from '@/features/documents/api';
 import { ROOT_ID } from '@/features/paperMap/staticPapers';
 
@@ -178,22 +180,13 @@ export function useWorkspaceTree(
     const treeItems = new Map<string, SubtreeItem>();
     workspaceTreeItemsRef.current.set(workspaceId, treeItems);
     for (const item of items) {
+      const hasChildren = (item.childIds?.length ?? 0) > 0;
       itemWorkspaceRef.current.set(item.id, workspaceId);
-      itemHasChildrenRef.current.set(item.id, (item.childIds?.length ?? 0) > 0);
-      treeItems.set(item.id, {
-        id: item.id,
-        label: item.label,
-        level: item.level,
-        description: item.description,
-        summary_html: item.summaryHtml ?? undefined,
-        override_css: item.overrideCss ?? undefined,
-        has_children: (item.childIds?.length ?? 0) > 0,
-        parent_id: item.parentId ?? undefined,
-        child_ids: item.childIds ?? [],
-      });
+      itemHasChildrenRef.current.set(item.id, hasChildren);
+      treeItems.set(item.id, create(SubtreeItemSchema, { item, hasChildren }));
 
       // Re-hydration check for already loaded items in getTree result
-      if ((item.childIds?.length ?? 0) > 0 && (expansionMap.get(item.id)?.openChildIds.length ?? 0) > 0) {
+      if (hasChildren && (expansionMap.get(item.id)?.openChildIds.length ?? 0) > 0) {
         if (!loadedSubtreeItemsRef.current.has(item.id) && !loadingSubtreeItemsRef.current.has(item.id)) {
           console.log('[workspace-tree] Re-hydrating subtree for already known item:', item.id);
           void loadSubtreeForItem(workspaceId, rootItemId, item.id, 1);
@@ -211,13 +204,14 @@ export function useWorkspaceTree(
     workspaceTreeItemsRef.current.set(workspaceId, workspaceItems);
 
     for (const item of items) {
-      workspaceItems.set(item.id, item);
+      const id = item.item!.id;
+      workspaceItems.set(id, item);
 
       // Re-hydration: if this item is expanded in the restored expansionMap, load its subtree
-      if (item.has_children && (expansionMap.get(item.id)?.openChildIds.length ?? 0) > 0) {
-        if (!loadedSubtreeItemsRef.current.has(item.id) && !loadingSubtreeItemsRef.current.has(item.id)) {
-          console.log('[workspace-tree] Re-hydrating subtree for item:', item.id);
-          void loadSubtreeForItem(workspaceId, workspaceRootItemId, item.id, 1);
+      if (item.hasChildren && (expansionMap.get(id)?.openChildIds.length ?? 0) > 0) {
+        if (!loadedSubtreeItemsRef.current.has(id) && !loadingSubtreeItemsRef.current.has(id)) {
+          console.log('[workspace-tree] Re-hydrating subtree for item:', id);
+          void loadSubtreeForItem(workspaceId, workspaceRootItemId, id, 1);
         }
       }
     }
@@ -231,8 +225,8 @@ export function useWorkspaceTree(
     try {
       const items = await getSubtree(workspaceId, itemId, maxDepth);
       for (const item of items) {
-        itemWorkspaceRef.current.set(item.id, workspaceId);
-        itemHasChildrenRef.current.set(item.id, item.has_children);
+        itemWorkspaceRef.current.set(item.item!.id, workspaceId);
+        itemHasChildrenRef.current.set(item.item!.id, item.hasChildren);
       }
       mergeTreeIntoWorkspace(workspaceId, workspaceRootItemId, items);
       loadedSubtreeItemsRef.current.add(itemId);
