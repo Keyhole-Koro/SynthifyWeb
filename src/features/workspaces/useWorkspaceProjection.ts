@@ -18,15 +18,12 @@ export function buildProjectedPaper(
     it.parentId === workspaceRootItemId ? workspaceId : (it.parentId ?? null);
 
   return {
-    id: it.id,
-    title: it.label,
-    description: it.description,
-    content: it.summaryHtml || `<p>${it.description}</p>`,
+    ...it,
+    content: it.content || `<p>${it.description}</p>`,
     hue: 220,
     parentId: projectedParentId,
     childIds: projectedChildIds,
-    overrideCss: it.overrideCss || undefined,
-  };
+  } satisfies Paper;
 }
 
 export function projectWorkspacePapers(
@@ -34,12 +31,12 @@ export function projectWorkspacePapers(
   workspaceRootItemId: string,
   treeItems: Map<string, SubtreeItem>,
   documentRootIds: string[],
-  buildWsPaper: (workspaceId: string, childPapers: { id: string; title: string }[]) => Paper,
+  buildWsPaper: (workspaceId: string, childPapers: { id: string }[]) => Paper,
 ): Paper[] {
   const childPapers = documentRootIds
     .map((id) => treeItems.get(id))
     .filter((item): item is SubtreeItem => item != null)
-    .map((item) => ({ id: item.item!.id, title: item.item!.label }));
+    .map((item) => ({ id: item.item!.id }));
 
   const projectedPapers: Paper[] = Array.from(treeItems.keys())
     .map((itemId) => buildProjectedPaper(workspaceRootItemId, itemId, treeItems, workspaceId))

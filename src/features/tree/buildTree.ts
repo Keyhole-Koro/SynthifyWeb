@@ -1,25 +1,20 @@
-import { buildPaperMap } from '@keyhole-koro/paper-in-paper';
 import type { Paper, PaperMap } from '@keyhole-koro/paper-in-paper';
 import type { ApiItem } from './api';
 
 const DEFAULT_HUE = 220;
 
-/**
- * GetTree レスポンスの items から PaperMap を構築する。
- */
 export function buildPaperMapFromTree(items: ApiItem[]): PaperMap {
-  const papers: Paper[] = items.map((item) => ({
-    id: item.id,
-    title: item.label,
-    description: item.description,
-    content: item.summaryHtml || `<p>${item.description}</p>`,
-    hue: DEFAULT_HUE,
-    parentId: item.parentId || null,
-    childIds: item.childIds || [],
-    overrideCss: item.overrideCss || undefined,
-  }));
-
-  return buildPaperMap(papers);
+  return new Map(
+    items.map((item) => [
+      item.id,
+      {
+        ...item,
+        content: item.content || `<p>${item.description}</p>`,
+        hue: DEFAULT_HUE,
+        parentId: item.parentId || null,
+      } satisfies Paper,
+    ]),
+  );
 }
 
 /**

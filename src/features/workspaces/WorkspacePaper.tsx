@@ -12,7 +12,7 @@ interface WorkspacePaperProps {
   workspaceId: string;
   workspaceName: string;
   hasTree: boolean;
-  childItems: { id: string; title: string }[];
+  childItems: { id: string }[];
   onUploadFile: (file: File) => Promise<{ jobId: string; documentId: string }>;
   onProcessingComplete?: (jobId: string) => Promise<void> | void;
 }

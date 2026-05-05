@@ -39,12 +39,7 @@ export function useWorkspaceTree(
       if (initializedWorkspacesRef.current.has(workspaceId)) {
         const rootItemId = workspaceRootItemRef.current.get(workspaceId);
         const childPapers = rootItemId
-          ? (workspaceDocumentRootIdsRef.current.get(workspaceId) ?? [])
-              .map((id) => {
-                const it = workspaceTreeItemsRef.current.get(workspaceId)?.get(id)?.item;
-                return it ? { id: it.id, title: it.label } : null;
-              })
-              .filter((p): p is { id: string; title: string } => p != null)
+          ? (workspaceDocumentRootIdsRef.current.get(workspaceId) ?? []).map((id) => ({ id }))
           : [];
         setWorkspacePapers(workspaceId, [buildWsPaper(workspaceId, childPapers)]);
       }
@@ -85,7 +80,7 @@ export function useWorkspaceTree(
 
   const buildWsPaper = useCallback((
     workspaceId: string,
-    childPapers: { id: string; title: string }[],
+    childPapers: { id: string }[],
   ): Paper => {
     const workspaceName = getWorkspaceName(workspaceId);
     return {
