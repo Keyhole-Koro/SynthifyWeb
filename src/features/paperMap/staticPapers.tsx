@@ -1,4 +1,4 @@
-import { usePaperStore } from '@keyhole-koro/paper-in-paper';
+import { usePaperStoreSelector } from '@keyhole-koro/paper-in-paper';
 import type { Paper } from '@keyhole-koro/paper-in-paper';
 
 export const ROOT_ID = 'root';
@@ -15,8 +15,7 @@ const linkStyle: React.CSSProperties = {
 
 // Paper link — triggers inline expansion on click via data-paper-id
 export function PL({ id, children, variant }: { id: string; children?: React.ReactNode; variant?: 'card' }) {
-  const { state } = usePaperStore();
-  const paper = state.paperMap.get(id);
+  const paper = usePaperStoreSelector(({ state }) => state.paperMap.get(id));
 
   if (variant === 'card') {
     return (
