@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useEffect } from 'react';
-import type { Paper, ExpansionMap } from '@keyhole-koro/paper-in-paper';
+import type { CanvasHandleHook, Command, ExpansionMap, Paper } from '@keyhole-koro/paper-in-paper';
 import { WorkspacePaper } from '@/features/workspaces/WorkspacePaper';
 import { findRootItemId } from '@/features/tree/buildTree';
 import { projectWorkspacePapers } from '@/features/workspaces/useWorkspaceProjection';
@@ -13,13 +13,26 @@ import { ROOT_ID } from '@/features/paperMap/staticPapers';
 
 export function useWorkspaceTree(
   getWorkspaceName: (id: string) => string,
-  expansionMap: ExpansionMap,
-  setExpansionMap: React.Dispatch<React.SetStateAction<ExpansionMap>>,
-  setFocusedItemId: React.Dispatch<React.SetStateAction<string | null>>,
+  canvas: CanvasHandleHook,
+  defaultExpansionMap: ExpansionMap,
   setWorkspacePapers: (workspaceId: string, papers: Paper[]) => void,
   clearWorkspacePapers: () => void,
   workspaces: { workspaceId: string }[],
 ) {
+  const getCanvasExpansionMap = useCallback(
+    () => canvas.current?.getState().expansionMap ?? defaultExpansionMap,
+    [canvas, defaultExpansionMap],
+  );
+
+  const dispatchCanvasCommand = useCallback(
+    (command: Command) => canvas.current?.dispatch(command),
+    [canvas],
+  );
+
+  const subscribeCanvas = useCallback(
+    (listener: () => void) => canvas.current?.subscribe(listener) ?? (() => {}),
+    [canvas],
+  );
   const itemWorkspaceRef = useRef<Map<string, string>>(new Map());
   const itemHasChildrenRef = useRef<Map<string, boolean>>(new Map());
   const workspaceRootItemRef = useRef<Map<string, string>>(new Map());
@@ -27,13 +40,16 @@ export function useWorkspaceTree(
   const workspaceTreeItemsRef = useRef<Map<string, Map<string, SubtreeItem>>>(new Map());
   const loadedSubtreeItemsRef = useRef<Set<string>>(new Set());
   const loadingSubtreeItemsRef = useRef<Set<string>>(new Set());
-  const prevExpansionRef = useRef<ExpansionMap>(expansionMap);
+  const prevExpansionRef = useRef<ExpansionMap>(new Map());
   const initializedWorkspacesRef = useRef<Set<string>>(new Set());
 
   // Re-hydrate expanded workspaces and subtrees on mount or when workspaces are loaded.
   // Also re-renders already-initialized workspaces so their title reflects the loaded name.
+  // Re-runs when canvas.current changes so we can read its initial state once attached.
   useEffect(() => {
     if (workspaces.length === 0) return;
+    if (!canvas.current) return;
+    const currentExpansionMap = canvas.current.getState().expansionMap;
 
     for (const { workspaceId } of workspaces) {
       if (initializedWorkspacesRef.current.has(workspaceId)) {
@@ -45,10 +61,10 @@ export function useWorkspaceTree(
       }
     }
 
-    const rootOpenIds = expansionMap.get(ROOT_ID)?.openChildIds ?? [];
+    const rootOpenIds = currentExpansionMap.get(ROOT_ID)?.openChildIds ?? [];
     if (!rootOpenIds.includes('workspaces')) return;
 
-    const workspacesOpenIds = expansionMap.get('workspaces')?.openChildIds ?? [];
+    const workspacesOpenIds = currentExpansionMap.get('workspaces')?.openChildIds ?? [];
     for (const workspaceId of workspacesOpenIds) {
       if (!initializedWorkspacesRef.current.has(workspaceId)) {
         console.log('[workspace-tree] Re-hydrating workspace:', workspaceId);
@@ -56,12 +72,11 @@ export function useWorkspaceTree(
       }
     }
 
-    // Also check for expanded items within workspaces
+    // Also check for expanded items within workspaces.
     // We can't easily know which workspace an item belongs to without itemWorkspaceRef,
-    // so we might need to wait for workspace trees to load.
-    // handleExpansionMapChange will handle newly discovered items once itemWorkspaceRef is populated.
+    // so we may need to wait for workspace trees to load before subtree hydration catches up.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaces]);
+  }, [canvas.current, workspaces]);
 
   const handleUploadWorkspaceFile = useCallback(async (workspaceId: string, file: File) => {
     const created = await createDocument(
@@ -98,46 +113,50 @@ export function useWorkspaceTree(
           childItems={childPapers}
           onUploadFile={(file) => handleUploadWorkspaceFile(workspaceId, file)}
           onProcessingComplete={() => refreshWorkspaceTree(workspaceId, { revealNewDocumentRoots: true })}
-          onSelectItem={(paperId) => {
-            setExpansionMap((prev) => {
-              const next = new Map(prev);
-              next.set('workspaces', { openChildIds: [workspaceId] });
-              const openChildIds = Array.from(new Set([...(next.get(workspaceId)?.openChildIds ?? []), paperId]));
-              next.set(workspaceId, { openChildIds });
-              return next;
-            });
-            setFocusedItemId(paperId);
-          }}
         />
       ),
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getWorkspaceName, handleUploadWorkspaceFile, setExpansionMap, setFocusedItemId]);
+  }, [dispatchCanvasCommand, getWorkspaceName, handleUploadWorkspaceFile]);
+
+  function syncOpenChildren(parentId: string, desiredOpenIds: string[]) {
+    const currentOpenIds = getCanvasExpansionMap().get(parentId)?.openChildIds ?? [];
+    const desiredSet = new Set(desiredOpenIds);
+    const currentSet = new Set(currentOpenIds);
+
+    for (const childId of currentOpenIds) {
+      if (!desiredSet.has(childId)) {
+        dispatchCanvasCommand({ type: 'CLOSE_NODE', parentId, childId });
+      }
+    }
+
+    for (const childId of desiredOpenIds) {
+      if (!currentSet.has(childId)) {
+        dispatchCanvasCommand({ type: 'OPEN_NODE', parentId, childId });
+      }
+    }
+  }
 
   function updateWorkspaceExpansion(
     workspaceId: string,
     newDocumentRootIds: string[] = [],
     revealNewDocumentRoots = false,
   ) {
-    setExpansionMap((prev) => {
-      const next = new Map(prev);
-      next.set(ROOT_ID, { openChildIds: ['workspaces'] });
-      next.set('workspaces', { openChildIds: [workspaceId] });
+    syncOpenChildren(ROOT_ID, ['workspaces']);
+    syncOpenChildren('workspaces', [workspaceId]);
 
-      const allTreeItemIds = new Set(workspaceTreeItemsRef.current.get(workspaceId)?.keys() ?? []);
-      const currentWorkspaceOpenIds = (next.get(workspaceId)?.openChildIds ?? []).filter((itemId) => allTreeItemIds.has(itemId));
-      const openChildIds = revealNewDocumentRoots
-        ? Array.from(new Set([...currentWorkspaceOpenIds, ...newDocumentRootIds]))
-        : currentWorkspaceOpenIds;
+    const allTreeItemIds = new Set(workspaceTreeItemsRef.current.get(workspaceId)?.keys() ?? []);
+    const currentWorkspaceOpenIds = (getCanvasExpansionMap().get(workspaceId)?.openChildIds ?? []).filter((itemId) => allTreeItemIds.has(itemId));
+    const openChildIds = revealNewDocumentRoots
+      ? Array.from(new Set([...currentWorkspaceOpenIds, ...newDocumentRootIds]))
+      : currentWorkspaceOpenIds;
 
-      next.set(workspaceId, { openChildIds });
-      console.log('[workspace-tree] updateWorkspaceExpansion', {
-        workspaceId,
-        revealNewDocumentRoots,
-        newDocumentRootIds,
-        openChildIds,
-      });
-      return next;
+    syncOpenChildren(workspaceId, openChildIds);
+    console.log('[workspace-tree] updateWorkspaceExpansion', {
+      workspaceId,
+      revealNewDocumentRoots,
+      newDocumentRootIds,
+      openChildIds,
     });
   }
 
@@ -197,7 +216,7 @@ export function useWorkspaceTree(
       treeItems.set(item.id, create(SubtreeItemSchema, { item, hasChildren }));
 
       // Re-hydration check for already loaded items in getTree result
-      if (hasChildren && (expansionMap.get(item.id)?.openChildIds.length ?? 0) > 0) {
+      if (hasChildren && (getCanvasExpansionMap().get(item.id)?.openChildIds.length ?? 0) > 0) {
         if (!loadedSubtreeItemsRef.current.has(item.id) && !loadingSubtreeItemsRef.current.has(item.id)) {
           console.log('[workspace-tree] Re-hydrating subtree for already known item:', item.id);
           void loadSubtreeForItem(workspaceId, rootItemId, item.id, 1);
@@ -219,7 +238,7 @@ export function useWorkspaceTree(
       workspaceItems.set(id, item);
 
       // Re-hydration: if this item is expanded in the restored expansionMap, load its subtree
-      if (item.hasChildren && (expansionMap.get(id)?.openChildIds.length ?? 0) > 0) {
+      if (item.hasChildren && (getCanvasExpansionMap().get(id)?.openChildIds.length ?? 0) > 0) {
         if (!loadedSubtreeItemsRef.current.has(id) && !loadingSubtreeItemsRef.current.has(id)) {
           console.log('[workspace-tree] Re-hydrating subtree for item:', id);
           void loadSubtreeForItem(workspaceId, workspaceRootItemId, id, 1);
@@ -248,32 +267,42 @@ export function useWorkspaceTree(
     }
   }
 
-  // Watch for expansion changes and load subtrees
+  // Watch for expansion changes and load subtrees.
+  // Re-subscribes when the canvas instance changes (handles next/dynamic late mount).
   useEffect(() => {
-    const prev = prevExpansionRef.current;
-    if (expansionMap === prev) return;
+    const handle = canvas.current;
+    if (!handle) return;
 
-    const newlyOpened: string[] = [];
-    for (const [parentId, entry] of expansionMap) {
-      const currentIds = entry?.openChildIds ?? [];
-      const prevIds = prev.get(parentId)?.openChildIds ?? [];
-      const prevSet = new Set(prevIds);
-      for (const childId of currentIds) {
-        if (!prevSet.has(childId)) newlyOpened.push(childId);
+    const handleExpansionChange = () => {
+      const expansionMap = handle.getState().expansionMap;
+      const prev = prevExpansionRef.current;
+      if (expansionMap === prev) return;
+
+      const newlyOpened: string[] = [];
+      for (const [parentId, entry] of expansionMap) {
+        const currentIds = entry?.openChildIds ?? [];
+        const prevIds = prev.get(parentId)?.openChildIds ?? [];
+        const prevSet = new Set(prevIds);
+        for (const childId of currentIds) {
+          if (!prevSet.has(childId)) newlyOpened.push(childId);
+        }
       }
-    }
-    prevExpansionRef.current = expansionMap;
+      prevExpansionRef.current = expansionMap;
 
-    for (const itemId of newlyOpened) {
-      if (!itemHasChildrenRef.current.get(itemId)) continue;
-      const workspaceId = itemWorkspaceRef.current.get(itemId);
-      if (!workspaceId) continue;
-      const workspaceRootItemId = workspaceRootItemRef.current.get(workspaceId);
-      if (!workspaceRootItemId) continue;
-      void loadSubtreeForItem(workspaceId, workspaceRootItemId, itemId, 1);
-    }
+      for (const itemId of newlyOpened) {
+        if (!itemHasChildrenRef.current.get(itemId)) continue;
+        const workspaceId = itemWorkspaceRef.current.get(itemId);
+        if (!workspaceId) continue;
+        const workspaceRootItemId = workspaceRootItemRef.current.get(workspaceId);
+        if (!workspaceRootItemId) continue;
+        void loadSubtreeForItem(workspaceId, workspaceRootItemId, itemId, 1);
+      }
+    };
+
+    handleExpansionChange();
+    return handle.subscribe(handleExpansionChange);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expansionMap]);
+  }, [canvas.current]);
 
   const handleOpenWorkspace = useCallback(async (workspaceId: string) => {
     const knownRootId = workspaceRootItemRef.current.get(workspaceId);
@@ -282,21 +311,17 @@ export function useWorkspaceTree(
         void loadSubtreeForItem(workspaceId, knownRootId, knownRootId, 1);
       }
       updateWorkspaceExpansion(workspaceId);
-      setFocusedItemId(workspaceId);
+      dispatchCanvasCommand({ type: 'FOCUS_NODE', nodeId: workspaceId });
       return;
     }
     initializedWorkspacesRef.current.add(workspaceId);
     setWorkspacePapers(workspaceId, [buildWsPaper(workspaceId, [])]);
 
     updateWorkspaceExpansion(workspaceId);
-    setFocusedItemId(workspaceId);
+    dispatchCanvasCommand({ type: 'FOCUS_NODE', nodeId: workspaceId });
     await refreshWorkspaceTree(workspaceId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getWorkspaceName, handleUploadWorkspaceFile]);
-
-  function handleExpansionMapChange(next: ExpansionMap) {
-    setExpansionMap(next);
-  }
+  }, [dispatchCanvasCommand, getWorkspaceName, handleUploadWorkspaceFile]);
 
   function resetTree() {
     itemWorkspaceRef.current.clear();
@@ -313,7 +338,6 @@ export function useWorkspaceTree(
 
   return {
     handleOpenWorkspace,
-    handleExpansionMapChange,
     resetTree,
     buildWsPaper,
   };

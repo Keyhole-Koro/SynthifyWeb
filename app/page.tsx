@@ -1,16 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { AuthMode } from '@/features/auth/AuthPaper';
-import type { ExpansionMap, Paper } from '@keyhole-koro/paper-in-paper';
-import { ROOT_ID } from '@/features/paperMap/staticPapers';
+import type { Paper } from '@keyhole-koro/paper-in-paper';
+import { useCanvasHandle } from '@keyhole-koro/paper-in-paper';
 import { useLandingPaperMap } from '@/features/paperMap/hooks/useLandingPaperMap';
+import { useHomeCanvasViewState } from '@/features/paperMap/hooks/useHomeCanvasViewState';
+import { usePaperCanvasOpenState } from '@/features/paperMap/hooks/usePaperCanvasOpenState';
 import { useAuthState } from '@/features/auth/useAuthState';
 import { signOutSession } from '@/features/auth/session';
-import { saveExpansionMap, loadExpansionMap, saveFocusedItemId, loadFocusedItemId, clearExpansionMap } from '@/features/paperMap/expansionPersistence';
+import { clearExpansionMap } from '@/features/paperMap/expansionPersistence';
+import { computeDefaultOpenState, useDefaultOpenState } from '@/features/paperMap/hooks/useDefaultOpenState';
 import { useWorkspaceTree } from '@/features/workspaces/useWorkspaceTree';
 import { createWorkspace } from '@/features/workspaces/api';
+import { ROOT_ID } from '@/features/paperMap/staticPapers';
 
 const PaperCanvas = dynamic(
   () => import('@keyhole-koro/paper-in-paper').then((mod) => mod.PaperCanvas),
@@ -33,35 +37,14 @@ export default function LandingPage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const [expansionMap, setExpansionMap] = useState<ExpansionMap>(() => {
-    if (typeof window !== 'undefined') {
-      const loaded = loadExpansionMap();
-      if (loaded) return loaded;
-    }
-    const m = new Map();
-    m.set(ROOT_ID, { openChildIds: ['auth'] });
-    return m;
+  const openState = useDefaultOpenState({ user, loading, workspaces });
+  const canvas = useCanvasHandle();
+
+  usePaperCanvasOpenState({
+    canvas,
+    attachKey: openState?.canvasKey,
+    onPersistOpenState: openState?.persistOpenState,
   });
-
-  const [focusedItemId, setFocusedItemId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      const loaded = loadFocusedItemId();
-      if (loaded) return loaded;
-    }
-    return 'auth';
-  });
-
-  useEffect(() => {
-    if (hasMounted) {
-      saveExpansionMap(expansionMap);
-    }
-  }, [expansionMap, hasMounted]);
-
-  useEffect(() => {
-    if (hasMounted) {
-      saveFocusedItemId(focusedItemId);
-    }
-  }, [focusedItemId, hasMounted]);
 
   const [workspacePaperGroups, setWorkspacePaperGroups] = useState<Map<string, Paper[]>>(new Map());
   const getWorkspaceName = useCallback(
@@ -83,34 +66,27 @@ export default function LandingPage() {
     setWorkspacePaperGroups(new Map());
   }, []);
 
-  const { handleOpenWorkspace, handleExpansionMapChange, resetTree, buildWsPaper } = useWorkspaceTree(
+  const { handleOpenWorkspace, resetTree, buildWsPaper } = useWorkspaceTree(
     getWorkspaceName,
-    expansionMap,
-    setExpansionMap,
-    setFocusedItemId,
+    canvas,
+    openState?.defaultOpenState.expansionMap ?? new Map(),
     setWorkspacePapers,
     clearWorkspacePapers,
     workspaces,
   );
 
-  const isWorkspaceExpanded = useMemo(() => {
-    const rootOpenIds = expansionMap.get(ROOT_ID)?.openChildIds ?? [];
-    return rootOpenIds.includes('workspaces');
-  }, [expansionMap]);
-  const isFullscreen = isWorkspaceExpanded || canvasFullscreen;
-  const rootContentImportance = isWorkspaceExpanded ? 18 : 100;
-  const authImportance = isWorkspaceExpanded ? 15 : 100;
-  const workspacesImportance = isWorkspaceExpanded ? 180 : 100;
+  const {
+    isFullscreen,
+    authAttention,
+    workspacesAttention,
+  } = useHomeCanvasViewState(canvas, canvasFullscreen);
 
   const handleLogout = useCallback(async () => {
     await signOutSession();
     resetTree();
     clearExpansionMap();
-    const m = new Map();
-    m.set(ROOT_ID, { openChildIds: ['auth'] });
-    setExpansionMap(m);
-    setFocusedItemId('auth');
-  }, [resetTree]);
+    openState?.resetOpenState(computeDefaultOpenState({ user: null, workspaces: [] }));
+  }, [openState, resetTree]);
 
   const handleCreateWorkspace = useCallback(async (name: string) => {
     const ws = await createWorkspace(name);
@@ -124,9 +100,8 @@ export default function LandingPage() {
     workspaces,
     workspaceError,
     authMode,
-    authImportance,
-    workspacesImportance,
-    rootContentImportance,
+    authAttention,
+    workspacesAttention,
     workspacePaperGroups,
     setAuthMode,
     handleEmailSubmit,
@@ -137,9 +112,9 @@ export default function LandingPage() {
     buildWsPaper,
   });
 
-  // Loading state during mount/initial hydration
+  // Show skeleton until mount and auth loading are both done.
   // MUST be after all hooks to follow "Rules of Hooks"
-  if (!hasMounted) {
+  if (!hasMounted || openState === null) {
     return (
       <div className="h-screen w-screen bg-[#f0e6d3] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -206,14 +181,13 @@ export default function LandingPage() {
         })()}
       >
         <PaperCanvas
+          key={openState.canvasKey}
+          ref={canvas.ref}
           paperMap={paperMap}
           rootId={ROOT_ID}
-          expansionMap={expansionMap}
-          focusedNodeId={focusedItemId}
+          defaultOpenState={openState.defaultOpenState}
           isFullscreen={isFullscreen}
           debug={true}
-          onExpansionMapChange={handleExpansionMapChange}
-          onFocusedNodeIdChange={setFocusedItemId}
           onFullscreenChange={setCanvasFullscreen}
         />
       </div>

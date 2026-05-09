@@ -12,9 +12,8 @@ interface UseLandingPaperMapProps {
   workspaces: Workspace[];
   workspaceError: Error | null;
   authMode: AuthMode;
-  authImportance: number;
-  workspacesImportance: number;
-  rootContentImportance: number;
+  authAttention: number;
+  workspacesAttention: number;
   workspacePaperGroups: Map<string, Paper[]>;
   setAuthMode: (mode: AuthMode) => void;
   handleEmailSubmit: () => void;
@@ -31,9 +30,8 @@ export function useLandingPaperMap({
   workspaces,
   workspaceError,
   authMode,
-  authImportance,
-  workspacesImportance,
-  rootContentImportance,
+  authAttention,
+  workspacesAttention,
   workspacePaperGroups,
   setAuthMode,
   handleEmailSubmit,
@@ -48,11 +46,10 @@ export function useLandingPaperMap({
     title: 'Synthify',
     description: 'Document Intelligence Platform',
     hue: 220,
-    contentImportance: rootContentImportance,
     parentId: null,
     childIds: ['auth', 'workspaces'],
     content: '<p>Synthify へようこそ。ドキュメントを知識構造へ変換します。</p>',
-  }), [rootContentImportance]);
+  }), []);
 
   const paperMap = useMemo<PaperMap>(() => {
     const map = new Map<string, Paper>();
@@ -64,7 +61,7 @@ export function useLandingPaperMap({
       title: user ? 'アカウント' : 'ログイン',
       description: '認証とプロファイル',
       hue: 280,
-      importance: authImportance,
+      attentionScore: authAttention,
       parentId: 'root',
       childIds: [],
       content: (
@@ -85,7 +82,7 @@ export function useLandingPaperMap({
       title: 'ワークスペース',
       description: 'あなたのプロジェクト一覧',
       hue: 200,
-      importance: workspacesImportance,
+      attentionScore: workspacesAttention,
       parentId: 'root',
       childIds: workspaces.map((w) => w.workspaceId),
       content: (
@@ -115,7 +112,7 @@ export function useLandingPaperMap({
   }, [
     rootPaper, user, workspaces, workspaceError, authMode, loading,
     handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace,
-    handleOpenWorkspace, buildWsPaper, authImportance, workspacesImportance,
+    handleOpenWorkspace, buildWsPaper, authAttention, workspacesAttention,
     workspacePaperGroups, setAuthMode,
   ]);
 
