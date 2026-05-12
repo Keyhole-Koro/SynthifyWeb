@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import type { DefaultOpenState, ExpansionMap } from '@keyhole-koro/paper-in-paper';
 import type { AuthUser } from '@/features/auth/session';
 import type { Workspace } from '@/features/workspaces/api';
@@ -45,6 +45,17 @@ function cloneExpansionMap(expansionMap: ExpansionMap): ExpansionMap {
   );
 }
 
+function useClientMounted(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      queueMicrotask(notify);
+      return () => {};
+    },
+    () => true,
+    () => false,
+  );
+}
+
 export interface OpenState {
   defaultOpenState: DefaultOpenState;
   hasMounted: boolean;
@@ -61,24 +72,20 @@ export interface OpenState {
 export function useDefaultOpenState(opts: DefaultOpenStateOptions): OpenState | null {
   const { user, loading, workspaces } = opts;
 
-  const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => { setHasMounted(true); }, []);
-
-  const [resolved, setResolved] = useState<DefaultOpenState | null>(null);
+  const hasMounted = useClientMounted();
+  const [resolvedOverride, setResolvedOverride] = useState<DefaultOpenState | null>(null);
   const [canvasKey, setCanvasKey] = useState(0);
 
-  useEffect(() => {
-    if (loading) return;
-    if (resolved !== null) return;
-
-    const initial = loadPersistedOpenState()
+  const computedResolved = useMemo(() => {
+    if (!hasMounted || loading) return null;
+    return loadPersistedOpenState()
       ?? computeDefaultOpenState({ user, workspaces });
+  }, [hasMounted, loading, user, workspaces]);
 
-    setResolved(initial);
-  }, [loading, user, workspaces, resolved]);
+  const resolved = resolvedOverride ?? computedResolved;
 
   const resetOpenState = useMemo(() => (next: DefaultOpenState) => {
-    setResolved({
+    setResolvedOverride({
       expansionMap: cloneExpansionMap(next.expansionMap ?? new Map()),
       focusedNodeId: next.focusedNodeId ?? null,
     });
