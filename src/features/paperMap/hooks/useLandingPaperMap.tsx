@@ -12,8 +12,6 @@ interface UseLandingPaperMapProps {
   workspaces: Workspace[];
   workspaceError: Error | null;
   authMode: AuthMode;
-  authAttention: number;
-  workspacesAttention: number;
   workspacePaperGroups: Map<string, Paper[]>;
   setAuthMode: (mode: AuthMode) => void;
   handleEmailSubmit: () => void;
@@ -30,8 +28,6 @@ export function useLandingPaperMap({
   workspaces,
   workspaceError,
   authMode,
-  authAttention,
-  workspacesAttention,
   workspacePaperGroups,
   setAuthMode,
   handleEmailSubmit,
@@ -49,6 +45,35 @@ export function useLandingPaperMap({
     parentId: null,
     childIds: ['auth', 'workspaces'],
     content: '<p>Synthify へようこそ。ドキュメントを知識構造へ変換します。</p>',
+    layout: ({ openChildIds, focusedNodeId, paperMap }) => {
+      // focusedNodeId が workspaces 自身もしくはその子孫なら workspaces を大きく見せる
+      const focusInWorkspaces = (() => {
+        if (!focusedNodeId) return false;
+        let cursor: string | null = focusedNodeId;
+        while (cursor) {
+          if (cursor === 'workspaces') return true;
+          cursor = paperMap.get(cursor)?.parentId ?? null;
+        }
+        return false;
+      })();
+
+      if (openChildIds.includes('workspaces')) {
+        const contentShare = 0.06;
+        const workspacesShare = focusInWorkspaces ? 0.88 : 0.78;
+        const others = openChildIds.filter((id) => id !== 'workspaces');
+        const evenOther = others.length > 0 ? (1 - workspacesShare - contentShare) / others.length : 0;
+        const childShares: Record<string, number> = { workspaces: workspacesShare };
+        for (const id of others) childShares[id] = evenOther;
+        return { contentShare, childShares };
+      }
+
+      // 子が開いている時、root の welcome content は補助情報として小さく残す。
+      const contentShare = openChildIds.length > 0 ? 0.08 : 1;
+      const childShare = openChildIds.length > 0 ? (1 - contentShare) / openChildIds.length : 0;
+      const childShares: Record<string, number> = {};
+      for (const id of openChildIds) childShares[id] = childShare;
+      return { contentShare, childShares };
+    },
   }), []);
 
   const paperMap = useMemo<PaperMap>(() => {
@@ -61,7 +86,6 @@ export function useLandingPaperMap({
       title: user ? 'アカウント' : 'ログイン',
       description: '認証とプロファイル',
       hue: 280,
-      attentionScore: authAttention,
       parentId: 'root',
       childIds: [],
       content: (
@@ -82,7 +106,6 @@ export function useLandingPaperMap({
       title: 'ワークスペース',
       description: 'あなたのプロジェクト一覧',
       hue: 200,
-      attentionScore: workspacesAttention,
       parentId: 'root',
       childIds: workspaces.map((w) => w.workspaceId),
       content: (
@@ -112,7 +135,7 @@ export function useLandingPaperMap({
   }, [
     rootPaper, user, workspaces, workspaceError, authMode, loading,
     handleEmailSubmit, handleGoogleSubmit, handleLogout, handleCreateWorkspace,
-    handleOpenWorkspace, buildWsPaper, authAttention, workspacesAttention,
+    handleOpenWorkspace, buildWsPaper,
     workspacePaperGroups, setAuthMode,
   ]);
 

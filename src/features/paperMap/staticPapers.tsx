@@ -1,5 +1,7 @@
-import { PaperMapBuilder, usePaperStoreSelector } from '@keyhole-koro/paper-in-paper';
-import type { PaperUpsertInput } from '@keyhole-koro/paper-in-paper';
+'use client';
+
+import { usePaperStore } from '@keyhole-koro/paper-in-paper';
+import type { Paper } from '@keyhole-koro/paper-in-paper';
 
 export const ROOT_ID = 'root';
 
@@ -15,7 +17,8 @@ const linkStyle: React.CSSProperties = {
 
 // Paper link — triggers inline expansion on click via data-paper-id
 export function PL({ id, children, variant }: { id: string; children?: React.ReactNode; variant?: 'card' }) {
-  const paper = usePaperStoreSelector(({ state }) => state.paperMap.get(id));
+  const { state } = usePaperStore();
+  const paper = state.paperMap.get(id);
 
   if (variant === 'card') {
     return (
@@ -41,11 +44,13 @@ export function PL({ id, children, variant }: { id: string; children?: React.Rea
 
 // --- Leaf papers ---
 
-export const canonicalizationPaper: PaperUpsertInput = {
+export const canonicalizationPaper: Paper = {
   id: 'canonicalization',
   title: 'エイリアス正規化',
   description: '同義語・表記揺れを同一アイテムに統合',
   hue: 200,
+  parentId: 'extraction',
+  childIds: [],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>正規化の仕組み</h2>
@@ -56,11 +61,13 @@ export const canonicalizationPaper: PaperUpsertInput = {
   ),
 };
 
-export const depthPaper: PaperUpsertInput = {
+export const depthPaper: Paper = {
   id: 'depth',
   title: '抽出深度',
   description: '詳細 vs 要約の2モード',
   hue: 200,
+  parentId: 'extraction',
+  childIds: [],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>抽出深度の選択</h2>
@@ -76,11 +83,13 @@ export const depthPaper: PaperUpsertInput = {
   ),
 };
 
-export const hierarchyPaper: PaperUpsertInput = {
+export const hierarchyPaper: Paper = {
   id: 'hierarchy',
   title: '階層構造',
   description: 'ツリーを決定する親子関係',
   hue: 150,
+  parentId: 'tree',
+  childIds: [],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>hierarchical な関係</h2>
@@ -91,11 +100,13 @@ export const hierarchyPaper: PaperUpsertInput = {
   ),
 };
 
-export const crosslinksPaper: PaperUpsertInput = {
+export const crosslinksPaper: Paper = {
   id: 'crosslinks',
   title: '関連リンク',
   description: '階層を超えたアイテム間の関係',
   hue: 150,
+  parentId: 'tree',
+  childIds: [],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>非階層リンク</h2>
@@ -106,11 +117,13 @@ export const crosslinksPaper: PaperUpsertInput = {
   ),
 };
 
-export const datalinkPaper: PaperUpsertInput = {
+export const datalinkPaper: Paper = {
   id: 'datalink',
   title: 'data-paper-id リンク',
   description: 'HTMLリンクがアイテム展開をトリガー',
   hue: 265,
+  parentId: 'explore',
+  childIds: [],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>仕組み</h2>
@@ -125,11 +138,13 @@ export const datalinkPaper: PaperUpsertInput = {
   ),
 };
 
-export const focusmodePaper: PaperUpsertInput = {
+export const focusmodePaper: Paper = {
   id: 'focusmode',
   title: 'フォーカスモード',
   description: '1つのアイテムに集中して読む',
   hue: 265,
+  parentId: 'explore',
+  childIds: [],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>フォーカスパネル</h2>
@@ -140,11 +155,13 @@ export const focusmodePaper: PaperUpsertInput = {
   ),
 };
 
-export const viewhistoryPaper: PaperUpsertInput = {
+export const viewhistoryPaper: Paper = {
   id: 'viewhistory',
   title: '閲覧履歴',
   description: 'ユーザーごとの探索状況を追跡',
   hue: 20,
+  parentId: 'team',
+  childIds: [],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>user_item_views</h2>
@@ -155,11 +172,13 @@ export const viewhistoryPaper: PaperUpsertInput = {
   ),
 };
 
-export const invitePaper: PaperUpsertInput = {
+export const invitePaper: Paper = {
   id: 'invite',
   title: 'メンバー招待',
   description: 'メールアドレスで招待・ロール設定',
   hue: 20,
+  parentId: 'team',
+  childIds: [],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>招待フロー</h2>
@@ -172,27 +191,33 @@ export const invitePaper: PaperUpsertInput = {
 
 // --- Branch papers ---
 
-export const authPaper: PaperUpsertInput = {
+export const authPaper: Paper = {
   id: 'auth',
   title: 'アカウント',
   description: 'Synthify をはじめる',
   hue: 250,
+  parentId: ROOT_ID,
+  childIds: [],
   content: null,
 };
 
-export const workspacesPaper: PaperUpsertInput = {
+export const workspacesPaper: Paper = {
   id: 'workspaces',
   title: 'ワークスペース',
   description: 'あなたのワークスペース一覧',
   hue: 200,
+  parentId: ROOT_ID,
+  childIds: [],
   content: null,
 };
 
-export const extractionPaper: PaperUpsertInput = {
+export const extractionPaper: Paper = {
   id: 'extraction',
   title: 'AI による概念抽出',
   description: 'Geminiがドキュメントを6ステージで解析',
   hue: 215,
+  parentId: ROOT_ID,
+  childIds: [canonicalizationPaper.id, depthPaper.id],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>6ステージ パイプライン</h2>
@@ -211,14 +236,15 @@ export const extractionPaper: PaperUpsertInput = {
       </div>
     </section>
   ),
-  children: [canonicalizationPaper, depthPaper],
 };
 
-export const treePaper: PaperUpsertInput = {
+export const treePaper: Paper = {
   id: 'tree',
   title: '知識構造',
   description: '概念間の階層・関連リンクを可視化',
   hue: 140,
+  parentId: ROOT_ID,
+  childIds: [hierarchyPaper.id, crosslinksPaper.id],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>ツリー構造</h2>
@@ -251,14 +277,15 @@ export const treePaper: PaperUpsertInput = {
       </div>
     </section>
   ),
-  children: [hierarchyPaper, crosslinksPaper],
 };
 
-export const explorePaper: PaperUpsertInput = {
+export const explorePaper: Paper = {
   id: 'explore',
   title: 'paper-in-paper 探索',
   description: 'アイテムをクリックするだけで概念が展開',
   hue: 280,
+  parentId: ROOT_ID,
+  childIds: [datalinkPaper.id, focusmodePaper.id],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>インタラクティブ探索</h2>
@@ -273,14 +300,15 @@ export const explorePaper: PaperUpsertInput = {
       </div>
     </section>
   ),
-  children: [datalinkPaper, focusmodePaper],
 };
 
-export const teamPaper: PaperUpsertInput = {
+export const teamPaper: Paper = {
   id: 'team',
   title: 'チームコラボレーション',
   description: 'ワークスペースを共有・閲覧履歴を追跡',
   hue: 10,
+  parentId: ROOT_ID,
+  childIds: [viewhistoryPaper.id, invitePaper.id],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>ロールベースアクセス</h2>
@@ -296,16 +324,17 @@ export const teamPaper: PaperUpsertInput = {
       </div>
     </section>
   ),
-  children: [viewhistoryPaper, invitePaper],
 };
 
 // --- Root ---
 
-export const rootPaper: PaperUpsertInput = {
+export const rootPaper: Paper = {
   id: ROOT_ID,
   title: 'トップ',
   description: 'ドキュメントを知識構造に変換・探索するシステム',
   hue: 230,
+  parentId: null,
+  childIds: [authPaper.id, workspacesPaper.id, extractionPaper.id, treePaper.id, explorePaper.id, teamPaper.id],
   content: (
     <section>
       <h2 style={{ margin: '0 0 8px', fontSize: '1rem' }}>Synthify</h2>
@@ -337,10 +366,9 @@ export const rootPaper: PaperUpsertInput = {
       </div>
     </section>
   ),
-  children: [authPaper, workspacesPaper, extractionPaper, treePaper, explorePaper, teamPaper],
 };
 
-const ALL_PAPERS: PaperUpsertInput[] = [
+export const STATIC_PAPERS: Paper[] = [
   rootPaper,
   authPaper,
   workspacesPaper,
@@ -357,9 +385,3 @@ const ALL_PAPERS: PaperUpsertInput[] = [
   viewhistoryPaper,
   invitePaper,
 ];
-
-const builder = new PaperMapBuilder();
-for (const paper of ALL_PAPERS) builder.upsert(paper);
-builder.build();
-
-export const STATIC_PAPERS = [...builder.values()];
