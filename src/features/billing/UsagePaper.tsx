@@ -1,8 +1,8 @@
 'use client';
 
 const MOCK_BREAKDOWN = [
-  { model: 'gemini-2.5-pro', inputCost: 4.21, outputCost: 5.32 },
-  { model: 'gemini-2.5-flash', inputCost: 1.05, outputCost: 1.40 },
+  { model: 'gemini-3-pro-preview', inputCost: 4.21, outputCost: 5.32 },
+  { model: 'gemini-3-flash-preview', inputCost: 1.05, outputCost: 1.40 },
   { model: 'embedding-001', inputCost: 0.36, outputCost: 0 },
 ];
 
