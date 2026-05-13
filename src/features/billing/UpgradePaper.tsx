@@ -10,17 +10,32 @@ interface UpgradePaperProps {
 export function UpgradePaper({ accountId }: UpgradePaperProps) {
   const [currency, setCurrency] = useState<BillingCurrency>('jpy');
   const [url, setUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setUrl(null);
-    setError(null);
-    setLoading(true);
+    let cancelled = false;
     createCheckoutSession(accountId, currency)
-      .then(setUrl)
-      .catch(() => setError('決済URLを取得できませんでした。'))
-      .finally(() => setLoading(false));
+      .then((nextUrl) => {
+        if (!cancelled) {
+          setUrl(nextUrl);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUrl(null);
+          setError('決済URLを取得できませんでした。');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [accountId, currency]);
 
   return (

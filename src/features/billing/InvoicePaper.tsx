@@ -27,15 +27,30 @@ const MOCK_PAYMENT_METHOD = {
 
 export function InvoicePaper({ accountId }: InvoicePaperProps) {
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
-  const [loadingPortal, setLoadingPortal] = useState(false);
+  const [loadingPortal, setLoadingPortal] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoadingPortal(true);
+    let cancelled = false;
     createPortalSession(accountId)
-      .then(setPortalUrl)
-      .catch(() => setError('ポータル URL を取得できませんでした。'))
-      .finally(() => setLoadingPortal(false));
+      .then((nextUrl) => {
+        if (!cancelled) {
+          setPortalUrl(nextUrl);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError('ポータル URL を取得できませんでした。');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingPortal(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [accountId]);
 
   return (
