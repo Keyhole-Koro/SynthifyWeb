@@ -30,9 +30,12 @@ export function BillingSummary({ accountId }: BillingSummaryProps) {
   const usagePercent = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
   const planLabel = account.plan === 'pro' ? 'Pro' : 'Free';
 
-  const mockMonthlyUsage = 12.34;
-  const mockBudget = 50.0;
-  const budgetPercent = Math.min(100, Math.round((mockMonthlyUsage / mockBudget) * 100));
+  const monthlyUsage = Number(account.currentPeriodUsage) || 0;
+  const budget = Number(account.budgetLimit) || 0;
+  const budgetPercent = budget > 0 ? Math.min(100, Math.round((monthlyUsage / budget) * 100)) : 0;
+  const usageSub = budget > 0
+    ? `予算 $${budget.toFixed(0)} の ${budgetPercent}%${account.budgetExceeded ? ' (超過)' : ''}`
+    : '予算未設定';
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
@@ -42,7 +45,7 @@ export function BillingSummary({ accountId }: BillingSummaryProps) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <StatCard label="現在のプラン" value={planLabel} />
-        <StatCard label="今月の使用量" value={`$${mockMonthlyUsage.toFixed(2)}`} sub={`予算 $${mockBudget.toFixed(0)} の ${budgetPercent}%`} />
+        <StatCard label="今月の使用量" value={`$${monthlyUsage.toFixed(2)}`} sub={usageSub} />
       </div>
 
       <div>

@@ -1,22 +1,84 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getBillingAccount, updateBudget } from './api';
 
-export function BudgetSettingsPaper() {
-  const [budget, setBudget] = useState<string>('50');
+interface BudgetSettingsPaperProps {
+  accountId: string;
+}
+
+interface BudgetState {
+  accountId: string;
+  budget: string;
+  loading: boolean;
+  error: string | null;
+}
+
+export function BudgetSettingsPaper({ accountId }: BudgetSettingsPaperProps) {
+  const [state, setState] = useState<BudgetState>({
+    accountId,
+    budget: '',
+    loading: true,
+    error: null,
+  });
   const [alert80, setAlert80] = useState(true);
   const [alert100, setAlert100] = useState(true);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+  useEffect(() => {
+    let cancelled = false;
+
+    getBillingAccount(accountId)
+      .then((account) => {
+        if (!cancelled) {
+          setState({
+            accountId,
+            budget: account.budgetLimit || '0',
+            loading: false,
+            error: null,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setState({
+            accountId,
+            budget: '0',
+            loading: false,
+            error: '予算情報を取得できませんでした。',
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId]);
+
+  const loading = state.accountId !== accountId || state.loading;
+
+  async function handleSave() {
+    setSaving(true);
+    setState((current) => ({ ...current, error: null }));
+    try {
+      const normalized = state.budget.trim() === '' ? '0' : state.budget.trim();
+      const result = await updateBudget(accountId, normalized);
+      setState((current) => ({ ...current, budget: result }));
+      setSavedAt(Date.now());
+      setTimeout(() => setSavedAt(null), 2000);
+    } catch {
+      setState((current) => ({ ...current, error: '保存に失敗しました。' }));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       <p style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.6, color: 'var(--muted)' }}>
         月次予算を設定すると、上限に近づいた段階で通知が届き、上限到達時は処理中ジョブを途中成果物にまとめて終了します。
+        0 を指定すると無制限になります。
       </p>
 
       <div>
@@ -29,8 +91,9 @@ export function BudgetSettingsPaper() {
             type="number"
             min={0}
             step={1}
-            value={budget}
-            onChange={(e) => setBudget(e.target.value)}
+            value={state.budget}
+            disabled={loading || saving}
+            onChange={(e) => setState((current) => ({ ...current, budget: e.target.value }))}
             style={{
               flex: 1,
               padding: '6px 10px',
@@ -57,12 +120,16 @@ export function BudgetSettingsPaper() {
           onChange={setAlert100}
           label="100% 到達で通知 + ジョブの途中打ち切り"
         />
+        <p style={{ margin: 0, fontSize: '0.65rem', color: 'var(--muted)', fontStyle: 'italic' }}>
+          ※ アラート設定はサーバー側ポリシーで一律有効。表示のみのトグルです。
+        </p>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button
           type="button"
           onClick={handleSave}
+          disabled={loading || saving}
           style={{
             padding: '6px 14px',
             borderRadius: 4,
@@ -71,17 +138,15 @@ export function BudgetSettingsPaper() {
             fontSize: '0.8rem',
             fontWeight: 600,
             border: 'none',
-            cursor: 'pointer',
+            cursor: loading || saving ? 'wait' : 'pointer',
+            opacity: loading || saving ? 0.5 : 1,
           }}
         >
-          保存
+          {saving ? '保存中...' : '保存'}
         </button>
-        {saved && <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>保存しました (mock)</span>}
+        {savedAt && <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>保存しました</span>}
+        {state.error && <span style={{ fontSize: '0.75rem', color: '#f87171' }}>{state.error}</span>}
       </div>
-
-      <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--muted)', fontStyle: 'italic' }}>
-        ※ バックエンド未接続。現状は UI のみのプレースホルダーです。
-      </p>
     </div>
   );
 }

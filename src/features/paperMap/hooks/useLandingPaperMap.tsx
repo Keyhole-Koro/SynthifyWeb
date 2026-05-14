@@ -162,7 +162,7 @@ export function useLandingPaperMap({
           hue: 40,
           parentId: 'billing',
           childIds: [],
-          content: <BudgetSettingsPaper />,
+          content: <BudgetSettingsPaper accountId={accountId} />,
         });
 
         map.set('billing:usage', {
@@ -172,7 +172,7 @@ export function useLandingPaperMap({
           hue: 40,
           parentId: 'billing',
           childIds: [],
-          content: <UsagePaper />,
+          content: <UsagePaper accountId={accountId} />,
         });
 
         map.set('billing:invoice', {
