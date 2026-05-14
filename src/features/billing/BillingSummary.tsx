@@ -28,7 +28,7 @@ export function BillingSummary({ accountId }: BillingSummaryProps) {
   const quota = Number(account.storageQuotaBytes);
   const used = Number(account.storageUsedBytes);
   const usagePercent = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
-  const planLabel = account.plan === 'pro' ? 'Pro' : 'Free';
+  const planLabel = account.plan === 'usage_based' ? 'Usage-Based' : 'Free';
 
   const monthlyUsage = Number(account.currentPeriodUsage) || 0;
   const budget = Number(account.budgetLimit) || 0;

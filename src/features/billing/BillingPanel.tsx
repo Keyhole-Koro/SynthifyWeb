@@ -28,7 +28,7 @@ export function BillingPanel({ accountId }: BillingPanelProps) {
   const quota = Number(account.storageQuotaBytes);
   const used = Number(account.storageUsedBytes);
   const usagePercent = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
-  const isPro = account.plan === 'pro';
+  const isUsageBased = account.plan === 'usage_based';
   const billingStatus = account.billingStatus;
 
   async function openCheckout() {
@@ -60,7 +60,7 @@ export function BillingPanel({ accountId }: BillingPanelProps) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">Plan</p>
-          <p className="mt-1 text-sm font-semibold text-stone-800">{isPro ? 'Pro' : 'Free'}</p>
+          <p className="mt-1 text-sm font-semibold text-stone-800">{isUsageBased ? 'Usage-Based' : 'Free'}</p>
           <p className="mt-0.5 text-[11px] text-stone-500">
             {formatBytes(used)} / {formatBytes(quota)} used
           </p>
@@ -73,7 +73,7 @@ export function BillingPanel({ accountId }: BillingPanelProps) {
             </p>
           )}
         </div>
-        {!isPro && (
+        {!isUsageBased && (
           <div className="flex shrink-0 overflow-hidden rounded-md border border-stone-200">
             {(['jpy', 'usd'] as BillingCurrency[]).map((value) => (
               <button
@@ -97,7 +97,7 @@ export function BillingPanel({ accountId }: BillingPanelProps) {
       </div>
 
       <div className="mt-3 flex gap-2">
-        {!isPro && (
+        {!isUsageBased && (
           <button
             type="button"
             disabled={pendingAction !== null}

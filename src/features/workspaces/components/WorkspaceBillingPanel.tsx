@@ -15,7 +15,7 @@ export function WorkspaceBillingPanel({ workspace }: WorkspaceBillingPanelProps)
   const quota = Number(workspace.storageQuotaBytes);
   const used = Number(workspace.storageUsedBytes);
   const usagePercent = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
-  const isPro = workspace.plan === WorkspacePlan.PRO;
+  const isUsageBased = workspace.plan === WorkspacePlan.USAGE_BASED;
 
   async function openCheckout() {
     setPendingAction('checkout');
@@ -48,7 +48,7 @@ export function WorkspaceBillingPanel({ workspace }: WorkspaceBillingPanelProps)
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">Plan</p>
-          <p className="mt-1 text-sm font-semibold text-stone-800">{isPro ? 'Pro' : 'Free'}</p>
+          <p className="mt-1 text-sm font-semibold text-stone-800">{isUsageBased ? 'Usage-Based' : 'Free'}</p>
           <p className="mt-0.5 text-[11px] text-stone-500">
             {formatBytes(used)} / {formatBytes(quota)} used
           </p>
@@ -75,7 +75,7 @@ export function WorkspaceBillingPanel({ workspace }: WorkspaceBillingPanelProps)
       </div>
 
       <div className="mt-3 flex gap-2">
-        {!isPro && (
+        {!isUsageBased && (
           <button
             type="button"
             disabled={pendingAction !== null}

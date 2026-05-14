@@ -21,19 +21,19 @@ export function CurrentPlanPaper({ accountId }: CurrentPlanPaperProps) {
     return <p style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>{error ?? '読み込み中...'}</p>;
   }
 
-  const isPro = account.plan === 'pro';
+  const isUsageBased = account.plan === 'usage_based';
   const billingStatus = account.billingStatus;
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
-      <Row label="プラン" value={isPro ? 'Pro (Usage-Based)' : 'Free'} />
+      <Row label="プラン" value={isUsageBased ? 'Usage-Based' : 'Free'} />
       <Row
         label="月額固定費"
-        value={isPro ? '$0 + 従量' : '$0'}
+        value={isUsageBased ? '$0 + 従量' : '$0'}
       />
       <Row
         label="1ファイル最大サイズ"
-        value={isPro ? '500 MB' : '10 MB'}
+        value={isUsageBased ? '500 MB' : '10 MB'}
       />
       <Row
         label="ストレージ上限"
