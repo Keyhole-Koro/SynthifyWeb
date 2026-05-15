@@ -15,7 +15,7 @@ export function WorkspaceBillingPanel({ workspace }: WorkspaceBillingPanelProps)
   const quota = Number(workspace.storageQuotaBytes);
   const used = Number(workspace.storageUsedBytes);
   const usagePercent = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
-  const isUsageBased = workspace.plan === WorkspacePlan.USAGE_BASED;
+  const isUsageBased = workspace.plan === WorkspacePlan.PRO;
 
   async function openCheckout() {
     setPendingAction('checkout');
